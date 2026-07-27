@@ -1,13 +1,4 @@
-"""El cerebro de BMO usando Ollama (LLM local, offline).
-
-Habla con un servidor Ollama local. Es la pieza REEMPLAZABLE: el dia que llegue
-el Hailo-10H, se escribe un HailoBrain con un metodo `decide` igual y se cambia
-una linea en config.yaml. El agente ni se entera (le da igual el tipo, solo le
-pide `.decide(...)`).
-
-Regla de oro: este brain solo DECIDE. Traduce la respuesta de Ollama a un
-BrainDecision (respuesta final o tool_calls) y deja que el agente ejecute.
-"""
+"""Cerebro de BMO sobre un servidor Ollama local (LLM offline)."""
 
 from __future__ import annotations
 
@@ -25,9 +16,6 @@ class OllamaBrain:
 
     def __init__(self, model: str, host: str, client: Optional[Any] = None) -> None:
         self._model = model
-        # Import lazy: en maquinas de desarrollo sin 'ollama' el modulo igual
-        # se importa; solo se necesita el paquete al instanciar de verdad.
-        # El cliente es inyectable para poder testear/verificar sin Ollama.
         if client is None:
             import ollama
 
@@ -39,17 +27,9 @@ class OllamaBrain:
         return cls(model=config.model, host=config.host)
 
     def decide(self, messages: List[Message], tools: List[Tool]) -> BrainDecision:
-        # Modelos chicos (gemma3:1b, etc.) no hacen tool-calling nativo confiable.
-        # En vez de pasar `tools=[...]` a Ollama, le pedimos por prompt que
-        # responda con un JSON {"action": "..."} cuando quiere ejecutar algo, y
-        # despues parseamos ese JSON del texto. Es la tecnica del repo de
-        # referencia (be-more-agent): mas fragil que el nativo, pero anda hasta
-        # en modelos de 1B.
         ollama_messages = [self._to_ollama(m) for m in messages]
         protocol = self._build_action_protocol(tools)
         if protocol:
-            # Fusionamos el protocolo con el system de personalidad en UN solo
-            # mensaje: los modelos chicos se confunden con varios system.
             if ollama_messages and ollama_messages[0]["role"] == "system":
                 ollama_messages[0] = {
                     "role": "system",
@@ -58,10 +38,6 @@ class OllamaBrain:
             else:
                 ollama_messages.insert(0, {"role": "system", "content": protocol})
 
-        # Temperatura baja = decisiones deterministas: el modelo sigue el
-        # protocolo al pie de la letra en vez de tirar una accion al azar.
-        # Dejamos un poco de calor (0.2) para que la charla no suene robotica,
-        # pero lo justo para que "ante la duda, charla" se cumpla de verdad.
         response = self._client.chat(
             model=self._model,
             messages=ollama_messages,

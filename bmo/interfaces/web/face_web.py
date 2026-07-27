@@ -1,20 +1,4 @@
-"""Adapter web de la cara de BMO (Flask + SSE).
-
-Implementa `FacePort`: cuando el agente hace `face.show(expr)`, este server
-guarda la expresion actual y la 'empuja' a todos los navegadores conectados via
-Server-Sent Events (SSE). El navegador cambia la imagen sin recargar.
-
-Corre en un hilo aparte (daemon) porque el REPL de consola bloquea el hilo
-principal. Es una interfaz de SALIDA: el navegador solo mira; la unica escritura
-es `/set/<expr>` para probar caras a mano.
-
-Los frames viven en `static/faces/<expresion>/NN.png` (una carpeta por
-expresion, uno o varios frames numerados). El navegador pide el manifest en
-`/faces/<expresion>` (JSON con la lista de frames y los fps) y despues cada
-frame en `/faces/<expresion>/<archivo>`. Todo se valida contra el enum
-`Expression` y un patron de nombre para evitar path traversal. Si una carpeta
-tiene un solo frame, la cara queda fija; si tiene varios, el front la anima.
-"""
+"""Adapter web de la cara de BMO (Flask + SSE): implementa FacePort."""
 
 from __future__ import annotations
 
@@ -32,10 +16,7 @@ from bmo.ports.face import FacePort
 
 logger = logging.getLogger(__name__)
 
-# Cuadros por segundo de la animacion (mismo ritmo para todas las caras).
 _DEFAULT_FPS = 4
-# Un frame valido se llama solo con numeros + extension de imagen. Cualquier
-# otra cosa (rutas, .., .txt) se rechaza: es la defensa contra path traversal.
 _FRAME_RE = re.compile(r"^\d+\.(png|gif|webp|jpg|jpeg)$", re.IGNORECASE)
 
 
@@ -47,12 +28,10 @@ class FaceWebServer(FacePort):
         self._port = port
         self._current = Expression.NEUTRAL
         self._lock = threading.Lock()
-        # Una cola por navegador conectado: show() publica en todas.
         self._subscribers: List["queue.Queue[str]"] = []
         self._faces_dir = Path(__file__).parent / "static" / "faces"
         self.app = self._build_app()
 
-    # --- FacePort ---------------------------------------------------------
     def show(self, expression: Expression) -> None:
         """Actualiza la expresion actual y la empuja a todos los navegadores."""
         with self._lock:
@@ -61,7 +40,6 @@ class FaceWebServer(FacePort):
         for q in subscribers:
             q.put(expression.value)
 
-    # --- Ciclo de vida ----------------------------------------------------
     def start(self) -> None:
         """Arranca Flask en un hilo daemon (no bloquea el REPL)."""
         thread = threading.Thread(target=self._run, name="bmo-face-web", daemon=True)
@@ -69,8 +47,6 @@ class FaceWebServer(FacePort):
         logger.info("cara de BMO en http://%s:%d", self._host, self._port)
 
     def _run(self) -> None:
-        # use_reloader=False: el reloader forkea y no funciona fuera del hilo
-        # principal; threaded=True para atender el SSE y las imagenes a la vez.
         self.app.run(
             host=self._host,
             port=self._port,
@@ -79,7 +55,6 @@ class FaceWebServer(FacePort):
             debug=False,
         )
 
-    # --- Flask ------------------------------------------------------------
     def _build_app(self) -> Flask:
         app = Flask(__name__)
 
@@ -107,7 +82,6 @@ class FaceWebServer(FacePort):
 
         @app.route("/faces/<expression>")
         def face_manifest(expression: str):
-            # Validar contra el enum evita path traversal (../../etc/passwd).
             try:
                 Expression(expression)
             except ValueError:
@@ -126,7 +100,6 @@ class FaceWebServer(FacePort):
                 Expression(expression)
             except ValueError:
                 abort(404)
-            # Doble validacion: el nombre debe ser NN.ext, nada de rutas.
             if not _FRAME_RE.match(filename):
                 abort(404)
             candidate = self._faces_dir / expression / filename
@@ -142,7 +115,6 @@ class FaceWebServer(FacePort):
         with self._lock:
             self._subscribers.append(q)
             current = self._current.value
-        # Primer evento inmediato: el navegador que recien entra ve la cara ya.
         yield f"data: {current}\n\n"
         try:
             while True:

@@ -1,9 +1,4 @@
-"""Tools: capacidades que el cerebro (LLM) puede invocar.
-
-Una Tool envuelve una accion concreta (mirar, hablar, cambiar la cara...) y la
-expone al LLM con un nombre, descripcion y parametros. El ToolRegistry es el
-catalogo de tools disponibles que se le pasa al cerebro.
-"""
+"""Tools invocables por el cerebro y su registro."""
 
 from __future__ import annotations
 

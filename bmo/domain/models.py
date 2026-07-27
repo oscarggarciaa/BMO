@@ -1,9 +1,4 @@
-"""Value objects del dominio de BMO.
-
-Son objetos inmutables que representan CONCEPTOS del mundo de BMO, sin depender
-de ninguna tecnologia concreta (ni OpenCV, ni Ollama, ni pygame). El dominio
-habla en estos terminos; los adapters traducen desde/hacia ellos.
-"""
+"""Value objects del dominio de BMO."""
 
 from __future__ import annotations
 
@@ -39,9 +34,6 @@ class Perception:
     """
 
     detections: List[Detection] = field(default_factory=list)
-    # Descripcion de texto libre (la usa la vision multimodal tipo moondream).
-    # Si esta presente, summary() la devuelve tal cual; si no, arma el resumen
-    # a partir de las detecciones (vision tipo OpenCV+Haar).
     description: Optional[str] = None
 
     def labels(self) -> List[str]:
@@ -80,8 +72,8 @@ class Expression(str, Enum):
     TALKING = "talking"
     THINKING = "thinking"
     SAD = "sad"
-    CAPTURING = "capturing"  # mirando por la camara (tool look)
-    WARMUP = "warmup"  # arrancando / calentando motores
+    CAPTURING = "capturing"
+    WARMUP = "warmup"
 
 
 @dataclass(frozen=True)

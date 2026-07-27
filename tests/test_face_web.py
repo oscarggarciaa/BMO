@@ -1,4 +1,4 @@
-"""Tests del adapter web de la cara (Flask): estado, SSE trigger y sprites."""
+"""Tests del adapter web de la cara: estado, SSE y frames."""
 
 from __future__ import annotations
 
@@ -52,14 +52,13 @@ def test_faces_manifest_lists_frames(server_and_client) -> None:
     resp = client.get("/faces/neutral")
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data["frames"]  # al menos un frame
+    assert data["frames"]
     assert all(f.startswith("/faces/neutral/") for f in data["frames"])
     assert data["fps"] > 0
 
 
 def test_faces_manifest_animated_expression_has_multiple_frames(server_and_client) -> None:
     _, client = server_and_client
-    # talking viene de 'speaking' (3 frames) -> es una animacion.
     data = client.get("/faces/talking").get_json()
     assert len(data["frames"]) >= 2
 
@@ -86,6 +85,5 @@ def test_frame_rejects_unknown_expression(server_and_client) -> None:
 
 def test_frame_rejects_bad_filename(server_and_client) -> None:
     _, client = server_and_client
-    # Nombre fuera del patron numerico -> 404 (bloquea path traversal).
     resp = client.get("/faces/neutral/secretos.txt")
     assert resp.status_code == 404

@@ -1,8 +1,4 @@
-"""Carga y tipado de la configuracion (config.yaml).
-
-Convierte el YAML en dataclasses tipadas para que el resto del codigo acceda a
-la config con autocompletado y sin strings magicos.
-"""
+"""Carga config.yaml en dataclasses tipadas."""
 
 from __future__ import annotations
 
@@ -30,7 +26,6 @@ class VisionConfig:
     adapter: str = "opencv_haar"
     models_path: str = "models"
     min_face_size: int = 80
-    # Solo para la vision multimodal (adapter 'moondream'):
     model: str = "moondream"
     host: str = "http://localhost:11434"
 

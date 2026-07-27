@@ -1,12 +1,4 @@
-"""Tool `look`: le da ojos a BMO.
-
-Envuelve la camara + la vision detras de una tool que el brain puede invocar.
-Cuando el LLM decide 'look', el agente ejecuta esta funcion: captura un frame,
-lo analiza y devuelve en texto que ve BMO.
-
-Es una factory que recibe los ports por inyeccion: no sabe si la camara es
-picamera2 o la AI Camera, ni si la vision es Haar o el Hailo. Solo habla ports.
-"""
+"""Tool `look`: captura un frame y lo describe (los ojos de BMO)."""
 
 from __future__ import annotations
 

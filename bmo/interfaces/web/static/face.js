@@ -73,9 +73,19 @@
         return r.ok ? r.json() : { frames: [], fps: 4 };
       })
       .then(function (data) {
+        // Anti race-condition: si mientras pediamos el manifest la cara ya
+        // cambio a otra, esta respuesta llego tarde y hay que ignorarla. Sin
+        // esto, un fetch lento puede pisar la expresion nueva (p.ej. quedarse
+        // pegado en 'talking' en vez de volver a 'listening').
+        if (expr !== currentExpr) {
+          return;
+        }
         animate(data.frames, data.fps);
       })
       .catch(function () {
+        if (expr !== currentExpr) {
+          return;
+        }
         stopAnimation();
         showLabel(expr);
       });

@@ -1,8 +1,4 @@
-"""Adapter de camara usando picamera2 (Raspberry Pi).
-
-picamera2 solo existe en la Raspberry Pi, por eso se importa dentro del __init__
-del adapter (lazy): asi el paquete se puede importar y testear en Windows/Mac.
-"""
+"""Adapter de camara con picamera2 (Raspberry Pi)."""
 
 from __future__ import annotations
 
@@ -18,7 +14,7 @@ class Picamera2Source(CameraSourcePort):
         self._picam2: Any = None
 
     def start(self) -> None:
-        from picamera2 import Picamera2  # import lazy: solo en la Pi
+        from picamera2 import Picamera2
 
         self._picam2 = Picamera2()
         self._picam2.configure(
@@ -31,8 +27,6 @@ class Picamera2Source(CameraSourcePort):
     def capture(self) -> Any:
         if self._picam2 is None:
             raise RuntimeError("La camara no fue iniciada. Llama a start() primero.")
-        # picamera2 con formato 'RGB888' entrega el array en orden BGR:
-        # ya sirve directo para OpenCV.
         return self._picam2.capture_array()
 
     def stop(self) -> None:

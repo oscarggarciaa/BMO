@@ -1,11 +1,4 @@
-"""Adapter de vision con OpenCV + Haar cascades (CPU).
-
-Migra la logica de deteccion de hola.py, pero SIN dibujar: devuelve una
-Perception (datos puros). Las cascadas se inyectan por constructor para poder
-testear con dobles de prueba, sin depender de archivos reales ni de la camara.
-
-El dia que llegue la AI Camera IMX500, se escribe otro VisionPort y listo.
-"""
+"""Adapter de vision con OpenCV + Haar cascades (CPU)."""
 
 from __future__ import annotations
 
@@ -74,7 +67,6 @@ class OpenCVHaarVision(VisionPort):
         for (x, y, w, h) in caras:
             detections.append(Detection("face", BoundingBox(x, y, w, h)))
 
-            # ojos: solo en la mitad superior de la cara
             roi_ojos = gray[y : y + h // 2, x : x + w]
             ojos = self._eye.detectMultiScale(
                 roi_ojos, 1.1, 10, minSize=(w // 8, w // 8)
@@ -84,7 +76,6 @@ class OpenCVHaarVision(VisionPort):
                     Detection("eye", BoundingBox(x + ex, y + ey, ew, eh))
                 )
 
-            # boca: solo en el tercio inferior
             oy = y + (2 * h) // 3
             roi_boca = gray[oy : y + h, x : x + w]
             bocas = self._smile.detectMultiScale(

@@ -1,16 +1,4 @@
-"""El Agente: el orquestador de BMO (el 'conductor').
-
-Responsabilidades (lo que el brain NO hace):
-- Lleva la memoria de la conversacion (lista de Message).
-- Corre el loop: pregunta al brain -> ejecuta las tools que pida -> vuelve a
-  preguntar -> hasta que el brain da una respuesta final.
-- Ejecuta las tools de verdad (via ToolRegistry) y le devuelve el resultado al
-  brain. Si una tool falla, le pasa el error al brain para que se recupere.
-- Se protege de loops infinitos con un tope de pasos (max_steps).
-
-El agente no conoce ningun LLM concreto: solo le pide `.decide(...)` al brain que
-le inyectan. Cambiar de Ollama al Hailo no toca ni una linea de este archivo.
-"""
+"""Agente: orquesta la conversacion entre el humano, el brain y las tools."""
 
 from __future__ import annotations
 
@@ -29,7 +17,7 @@ class Agent:
 
     def __init__(
         self,
-        brain,  # cualquier objeto con decide(messages, tools) -> BrainDecision
+        brain,
         tools: ToolRegistry,
         system_prompt: str = "",
         max_steps: int = 5,
@@ -38,8 +26,6 @@ class Agent:
         self._brain = brain
         self._tools = tools
         self._max_steps = max_steps
-        # Null Object: si no hay pantalla, `face.show(...)` no hace nada y el
-        # loop de abajo no necesita chequear `if face is not None`.
         self._face = face or NullFace()
         self._history: List[Message] = []
         if system_prompt:
@@ -58,7 +44,6 @@ class Agent:
         """
         self._history.append(Message(role="user", content=text))
         logger.info("USER pregunto: %s", text)
-        # BMO se pone a pensar en cuanto recibe el mensaje.
         self._face.show(Expression.THINKING)
 
         for step in range(self._max_steps):
@@ -68,14 +53,10 @@ class Agent:
             if not decision.wants_tools:
                 reply = decision.reply or Utterance(text="", speaker="bmo")
                 logger.info("BMO decidio responder: %s", reply.text)
-                # Tiene respuesta final: pasa a 'hablando'.
                 self._face.show(Expression.TALKING)
                 self._history.append(Message(role="assistant", content=reply.text))
                 return reply
 
-            # El brain pidio tools: primero registramos SU turno (con los
-            # tool_calls), y despues los resultados. Ese orden es el que Ollama
-            # espera; saltearlo confunde al modelo.
             logger.info(
                 "BMO decidio usar %d tool(s): %s",
                 len(decision.tool_calls),
@@ -97,12 +78,10 @@ class Agent:
                     Message(role="tool", content=result, name=call.name)
                 )
 
-        # Corte de seguridad: el brain siguio pidiendo tools sin cerrar.
         logger.warning(
             "corte de seguridad: se agotaron los %d pasos sin respuesta final",
             self._max_steps,
         )
-        # Algo salio mal: cara triste.
         self._face.show(Expression.SAD)
         fallback = Utterance(
             text="(me colgue pidiendo tools, corte por seguridad)", speaker="bmo"
@@ -124,6 +103,6 @@ class Agent:
 
         try:
             return str(tool.run(**call.arguments))
-        except Exception as exc:  # el resultado (error incluido) vuelve al brain
+        except Exception as exc:
             logger.exception("fallo ejecutando la tool '%s'", call.name)
             return f"error ejecutando '{call.name}': {exc}"

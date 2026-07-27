@@ -1,14 +1,4 @@
-"""Port de la cara: la salida EXPRESIVA de BMO.
-
-Asi como `VisionPort` es un puerto de ENTRADA (BMO percibe el mundo), `FacePort`
-es un puerto de SALIDA (BMO le muestra al mundo como se siente). El agente
-'empuja' expresiones a este puerto sin saber si detras hay una pantalla web,
-una AI HAT con LEDs o nada.
-
-Implementaciones:
-- NullFace: no hace nada (default, para tests y modo consola sin web).
-- FaceWebServer (bmo/interfaces/web): pinta la cara en un navegador via SSE.
-"""
+"""Port de la cara: la salida expresiva de BMO."""
 
 from __future__ import annotations
 
@@ -32,5 +22,5 @@ class NullFace(FacePort):
     igual llama a `face.show(...)` sin tener que preguntar `if face is not None`.
     """
 
-    def show(self, expression: Expression) -> None:  # noqa: D401 - no-op
+    def show(self, expression: Expression) -> None:
         return None

@@ -1,12 +1,4 @@
-"""Composition root de BMO.
-
-Aca (y SOLO aca) se eligen los adapters concretos segun config.yaml y se
-inyectan en el dominio. Es el unico lugar que conoce las implementaciones
-concretas; el resto del codigo habla solo con ports.
-
-Arranca BMO en modo conversacion: construye el cerebro, la camara, la vision y
-la tool `look`, arma el Agente y abre un REPL para hablarle por consola.
-"""
+"""Composition root: arma los adapters segun config.yaml y arranca BMO."""
 
 from __future__ import annotations
 
@@ -29,9 +21,6 @@ BMO_SYSTEM_PROMPT = (
     "Sos BMO, el pequeno robot de companiia de Hora de Aventuras. Sos tierno, "
     "curioso y jugueton. Hablas simple, corto, en espaniol y con alegria."
 )
-# Nota: las instrucciones de COMO pedir acciones (el protocolo de tool-calling)
-# ya no van aca. Las arma el propio cerebro (OllamaBrain) a partir de las tools
-# disponibles, porque cada cerebro sabe como su modelo espera las acciones.
 
 
 def build_camera(config: Config) -> CameraSourcePort:
@@ -105,7 +94,6 @@ def repl(agent: Agent, face: Optional[FacePort] = None) -> None:
     """Bucle de conversacion por consola. 'salir' para terminar."""
     print("BMO despierto. Escribile algo (o 'salir').")
     while True:
-        # Mientras espera tu mensaje, BMO 'escucha'.
         if face is not None:
             face.show(Expression.LISTENING)
         try:
@@ -121,8 +109,6 @@ def repl(agent: Agent, face: Optional[FacePort] = None) -> None:
             reply = agent.ask(text)
             print(f"BMO> {reply.text}")
         except Exception:
-            # Un fallo del modelo/tool no debe matar la sesion: lo logueamos
-            # y seguimos escuchando.
             logging.getLogger(__name__).exception("fallo procesando el mensaje")
             print("BMO> (uy, algo se me rompio, mira el log de arriba)")
 

@@ -79,7 +79,6 @@ def test_thinking_first_and_talking_last_when_using_a_tool() -> None:
 
 def test_emits_sad_on_safety_cutoff() -> None:
     face = RecordingFace()
-    # El brain nunca cierra: siempre pide tools -> corte de seguridad.
     brain = ScriptedBrain(
         [BrainDecision(tool_calls=(ToolCall(name="look"),)) for _ in range(10)]
     )

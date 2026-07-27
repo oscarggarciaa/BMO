@@ -1,0 +1,31 @@
+# =============================================================================
+# Configuracion de BMO
+# -----------------------------------------------------------------------------
+# Este archivo es el CORAZON del desacoplamiento. Cada seccion elige que
+# "adapter" concreto se usa para cada capacidad (port). El dia que llegue el
+# hardware nuevo (AI Camera IMX500, AI HAT+2 con Hailo-10H), cambias el campo
+# `adapter` y nada mas. El codigo del agente ni se entera.
+# =============================================================================
+
+camera:
+  adapter: picamera2          # futuro: usb | ai_camera_imx500
+  width: 1296
+  height: 972
+  format: RGB888
+
+vision:
+  adapter: moondream          # opencv_haar (solo caras) | moondream (ve la escena) | futuro: ai_camera_imx500
+  model: moondream            # modelo multimodal de Ollama que describe la imagen
+  host: http://localhost:11434
+  models_path: /home/oscar/Desktop/bmo/models
+  min_face_size: 80
+
+brain:
+  adapter: ollama             # futuro: hailo | cloud
+  model: gemma3:1b            # con el protocolo JSON no hace falta un modelo grande
+  host: http://localhost:11434
+
+web:                          # interfaz de debug (solo monitoreo)
+  enabled: true
+  host: 0.0.0.0
+  port: 5000

@@ -1,0 +1,16 @@
+# --- Core / arquitectura ---
+PyYAML>=6.0            # carga de config.yaml
+
+# --- Visión (Fase 1) ---
+numpy>=1.24
+opencv-python>=4.8     # detección Haar (CPU). Reemplazable por AI Camera IMX500 a futuro.
+# picamera2           # SOLO en la Raspberry Pi (viene con Raspberry Pi OS, no via pip en Windows)
+
+# --- Cerebro (Fase 3) ---
+ollama>=0.3.0          # cliente del LLM local con tool calling
+
+# --- Web debug (Fase 6) ---
+Flask>=3.0
+
+# --- Tests ---
+pytest>=8.0

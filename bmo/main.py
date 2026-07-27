@@ -1,0 +1,127 @@
+"""Composition root de BMO.
+
+Aca (y SOLO aca) se eligen los adapters concretos segun config.yaml y se
+inyectan en el dominio. Es el unico lugar que conoce las implementaciones
+concretas; el resto del codigo habla solo con ports.
+
+Arranca BMO en modo conversacion: construye el cerebro, la camara, la vision y
+la tool `look`, arma el Agente y abre un REPL para hablarle por consola.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+from bmo.config import Config
+from bmo.domain.agent import Agent
+from bmo.ports.camera import CameraSourcePort
+from bmo.ports.vision import VisionPort
+from bmo.tools.look import build_look_tool
+from bmo.tools.tool import ToolRegistry
+
+if TYPE_CHECKING:
+    from bmo.adapters.brain.ollama_brain import OllamaBrain
+
+BMO_SYSTEM_PROMPT = (
+    "Sos BMO, el pequeno robot de companiia de Hora de Aventuras. Sos tierno, "
+    "curioso y jugueton. Hablas simple, corto, en espaniol y con alegria."
+)
+# Nota: las instrucciones de COMO pedir acciones (el protocolo de tool-calling)
+# ya no van aca. Las arma el propio cerebro (OllamaBrain) a partir de las tools
+# disponibles, porque cada cerebro sabe como su modelo espera las acciones.
+
+
+def build_camera(config: Config) -> CameraSourcePort:
+    """Factory de camara: elige el adapter segun config (import lazy)."""
+    if config.camera.adapter == "picamera2":
+        from bmo.adapters.camera.picamera2_source import Picamera2Source
+
+        return Picamera2Source(config.camera)
+    raise ValueError(f"Adapter de camara desconocido: {config.camera.adapter}")
+
+
+def build_vision(config: Config) -> VisionPort:
+    """Factory de vision: elige el adapter segun config (import lazy)."""
+    if config.vision.adapter == "opencv_haar":
+        from bmo.adapters.vision.opencv_haar import OpenCVHaarVision
+
+        return OpenCVHaarVision.from_config(config.vision)
+    if config.vision.adapter == "moondream":
+        from bmo.adapters.vision.moondream import MoondreamVision
+
+        return MoondreamVision.from_config(config.vision)
+    raise ValueError(f"Adapter de vision desconocido: {config.vision.adapter}")
+
+
+def build_brain(config: Config) -> "OllamaBrain":
+    """Factory del cerebro: elige el adapter segun config (import lazy).
+
+    El dia del Hailo, se agrega un `elif == 'hailo'` con su adapter y listo.
+    """
+    if config.brain.adapter == "ollama":
+        from bmo.adapters.brain.ollama_brain import OllamaBrain
+
+        return OllamaBrain.from_config(config.brain)
+    raise ValueError(f"Adapter de cerebro desconocido: {config.brain.adapter}")
+
+
+def build_agent(
+    brain, camera: CameraSourcePort, vision: VisionPort
+) -> Agent:
+    """Ensambla el Agente: registra las tools y le inyecta el cerebro.
+
+    Separado del arranque de hardware para poder testearlo con fakes.
+    """
+    registry = ToolRegistry()
+    registry.register(build_look_tool(camera, vision))
+    return Agent(brain=brain, tools=registry, system_prompt=BMO_SYSTEM_PROMPT)
+
+
+def repl(agent: Agent) -> None:
+    """Bucle de conversacion por consola. 'salir' para terminar."""
+    print("BMO despierto. Escribile algo (o 'salir').")
+    while True:
+        try:
+            text = input("USER> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not text:
+            continue
+        if text.lower() in {"salir", "exit", "quit", "chau"}:
+            break
+        try:
+            reply = agent.ask(text)
+            print(f"BMO> {reply.text}")
+        except Exception:
+            # Un fallo del modelo/tool no debe matar la sesion: lo logueamos
+            # y seguimos escuchando.
+            logging.getLogger(__name__).exception("fallo procesando el mensaje")
+            print("BMO> (uy, algo se me rompio, mira el log de arriba)")
+
+
+def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    config = Config.load("config.yaml")
+    print(f"BMO arrancando... cerebro={config.brain.adapter}:{config.brain.model}")
+
+    camera = build_camera(config)
+    vision = build_vision(config)
+    brain = build_brain(config)
+    agent = build_agent(brain, camera, vision)
+
+    camera.start()
+    try:
+        repl(agent)
+    finally:
+        camera.stop()
+
+
+if __name__ == "__main__":
+    main()
+

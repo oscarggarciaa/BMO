@@ -1,0 +1,48 @@
+# --- Entornos virtuales y librerias instaladas ---
+.venv/
+venv/
+env/
+ENV/
+.env
+site-packages/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+
+# --- Caches de Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.cache/
+
+# --- Cobertura / tests ---
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Editores / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+
+# --- BMO: modelos y datos pesados (no van al repo) ---
+models/
+*.gguf
+*.onnx
+*.hef
+
+# --- Logs ---
+*.log

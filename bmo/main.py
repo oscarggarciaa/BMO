@@ -11,11 +11,13 @@ la tool `look`, arma el Agente y abre un REPL para hablarle por consola.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from bmo.config import Config
 from bmo.domain.agent import Agent
+from bmo.domain.models import Expression
 from bmo.ports.camera import CameraSourcePort
+from bmo.ports.face import FacePort
 from bmo.ports.vision import VisionPort
 from bmo.tools.look import build_look_tool
 from bmo.tools.tool import ToolRegistry
@@ -66,8 +68,24 @@ def build_brain(config: Config) -> "OllamaBrain":
     raise ValueError(f"Adapter de cerebro desconocido: {config.brain.adapter}")
 
 
+def build_face(config: Config) -> Optional[FacePort]:
+    """Factory de la cara: arma el server web si esta habilitado (import lazy).
+
+    Si `web.enabled` es False, devuelve None y BMO corre solo por consola (el
+    Agent usa un NullFace y no pasa nada).
+    """
+    if not config.web.enabled:
+        return None
+    from bmo.interfaces.web.face_web import FaceWebServer
+
+    return FaceWebServer(host=config.web.host, port=config.web.port)
+
+
 def build_agent(
-    brain, camera: CameraSourcePort, vision: VisionPort
+    brain,
+    camera: CameraSourcePort,
+    vision: VisionPort,
+    face: Optional[FacePort] = None,
 ) -> Agent:
     """Ensambla el Agente: registra las tools y le inyecta el cerebro.
 
@@ -75,13 +93,21 @@ def build_agent(
     """
     registry = ToolRegistry()
     registry.register(build_look_tool(camera, vision))
-    return Agent(brain=brain, tools=registry, system_prompt=BMO_SYSTEM_PROMPT)
+    return Agent(
+        brain=brain,
+        tools=registry,
+        system_prompt=BMO_SYSTEM_PROMPT,
+        face=face,
+    )
 
 
-def repl(agent: Agent) -> None:
+def repl(agent: Agent, face: Optional[FacePort] = None) -> None:
     """Bucle de conversacion por consola. 'salir' para terminar."""
     print("BMO despierto. Escribile algo (o 'salir').")
     while True:
+        # Mientras espera tu mensaje, BMO 'escucha'.
+        if face is not None:
+            face.show(Expression.LISTENING)
         try:
             text = input("USER> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -113,11 +139,15 @@ def main() -> None:
     camera = build_camera(config)
     vision = build_vision(config)
     brain = build_brain(config)
-    agent = build_agent(brain, camera, vision)
+    face = build_face(config)
+    agent = build_agent(brain, camera, vision, face)
 
     camera.start()
+    if face is not None:
+        face.start()
+        print(f"cara de BMO en http://{config.web.host}:{config.web.port}")
     try:
-        repl(agent)
+        repl(agent, face)
     finally:
         camera.stop()
 

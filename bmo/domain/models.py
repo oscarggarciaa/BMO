@@ -80,6 +80,8 @@ class Expression(str, Enum):
     TALKING = "talking"
     THINKING = "thinking"
     SAD = "sad"
+    CAPTURING = "capturing"  # mirando por la camara (tool look)
+    WARMUP = "warmup"  # arrancando / calentando motores
 
 
 @dataclass(frozen=True)

@@ -8,15 +8,19 @@ Corre en un hilo aparte (daemon) porque el REPL de consola bloquea el hilo
 principal. Es una interfaz de SALIDA: el navegador solo mira; la unica escritura
 es `/set/<expr>` para probar caras a mano.
 
-Los sprites viven en `static/faces/<expresion>.<ext>` (gif|png|webp|jpg). Se
-sirven por `/faces/<expresion>`, validando contra el enum `Expression` para
-evitar path traversal.
+Los frames viven en `static/faces/<expresion>/NN.png` (una carpeta por
+expresion, uno o varios frames numerados). El navegador pide el manifest en
+`/faces/<expresion>` (JSON con la lista de frames y los fps) y despues cada
+frame en `/faces/<expresion>/<archivo>`. Todo se valida contra el enum
+`Expression` y un patron de nombre para evitar path traversal. Si una carpeta
+tiene un solo frame, la cara queda fija; si tiene varios, el front la anima.
 """
 
 from __future__ import annotations
 
 import logging
 import queue
+import re
 import threading
 from pathlib import Path
 from typing import List
@@ -28,7 +32,11 @@ from bmo.ports.face import FacePort
 
 logger = logging.getLogger(__name__)
 
-_SPRITE_EXTENSIONS = ("gif", "png", "webp", "jpg", "jpeg")
+# Cuadros por segundo de la animacion (mismo ritmo para todas las caras).
+_DEFAULT_FPS = 4
+# Un frame valido se llama solo con numeros + extension de imagen. Cualquier
+# otra cosa (rutas, .., .txt) se rechaza: es la defensa contra path traversal.
+_FRAME_RE = re.compile(r"^\d+\.(png|gif|webp|jpg|jpeg)$", re.IGNORECASE)
 
 
 class FaceWebServer(FacePort):
@@ -98,16 +106,32 @@ class FaceWebServer(FacePort):
             return jsonify({"ok": True, "expression": expr.value})
 
         @app.route("/faces/<expression>")
-        def face_image(expression: str):
+        def face_manifest(expression: str):
             # Validar contra el enum evita path traversal (../../etc/passwd).
             try:
                 Expression(expression)
             except ValueError:
                 abort(404)
-            for ext in _SPRITE_EXTENSIONS:
-                candidate = self._faces_dir / f"{expression}.{ext}"
-                if candidate.exists():
-                    return send_file(str(candidate))
+            expr_dir = self._faces_dir / expression
+            frames: List[str] = []
+            if expr_dir.is_dir():
+                for frame in sorted(expr_dir.iterdir()):
+                    if frame.is_file() and _FRAME_RE.match(frame.name):
+                        frames.append(f"/faces/{expression}/{frame.name}")
+            return jsonify({"frames": frames, "fps": _DEFAULT_FPS})
+
+        @app.route("/faces/<expression>/<filename>")
+        def face_frame(expression: str, filename: str):
+            try:
+                Expression(expression)
+            except ValueError:
+                abort(404)
+            # Doble validacion: el nombre debe ser NN.ext, nada de rutas.
+            if not _FRAME_RE.match(filename):
+                abort(404)
+            candidate = self._faces_dir / expression / filename
+            if candidate.is_file():
+                return send_file(str(candidate))
             abort(404)
 
         return app

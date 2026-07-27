@@ -1,0 +1,43 @@
+/* Cara de BMO: pantalla completa, imagen centrada.
+   Pensado para verse en un navegador hoy y en una pantalla fisica maniana. */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  background: #0f1412; /* verde muy oscuro, tipo pantalla apagada de BMO */
+  overflow: hidden;
+  cursor: none; /* en modo pantalla no queremos el mouse */
+}
+
+#face {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#face-img {
+  max-width: 92vw;
+  max-height: 92vh;
+  image-rendering: pixelated; /* sprites nitidos aunque escalen */
+}
+
+/* Fallback cuando todavia no cargaste el sprite de esa expresion:
+   se muestra el NOMBRE de la expresion en grande. Asi podes probar hoy
+   sin tener imagenes. */
+#face-label {
+  display: none;
+  color: #4ecdc4;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 11vw;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

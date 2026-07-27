@@ -15,9 +15,10 @@ le inyectan. Cambiar de Ollama al Hailo no toca ni una linea de este archivo.
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import List, Optional
 
-from bmo.domain.models import Message, ToolCall, Utterance
+from bmo.domain.models import Expression, Message, ToolCall, Utterance
+from bmo.ports.face import FacePort, NullFace
 from bmo.tools.tool import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -32,10 +33,14 @@ class Agent:
         tools: ToolRegistry,
         system_prompt: str = "",
         max_steps: int = 5,
+        face: Optional[FacePort] = None,
     ) -> None:
         self._brain = brain
         self._tools = tools
         self._max_steps = max_steps
+        # Null Object: si no hay pantalla, `face.show(...)` no hace nada y el
+        # loop de abajo no necesita chequear `if face is not None`.
+        self._face = face or NullFace()
         self._history: List[Message] = []
         if system_prompt:
             self._history.append(Message(role="system", content=system_prompt))
@@ -53,6 +58,8 @@ class Agent:
         """
         self._history.append(Message(role="user", content=text))
         logger.info("USER pregunto: %s", text)
+        # BMO se pone a pensar en cuanto recibe el mensaje.
+        self._face.show(Expression.THINKING)
 
         for step in range(self._max_steps):
             logger.info("paso %d/%d: BMO esta pensando...", step + 1, self._max_steps)
@@ -61,6 +68,8 @@ class Agent:
             if not decision.wants_tools:
                 reply = decision.reply or Utterance(text="", speaker="bmo")
                 logger.info("BMO decidio responder: %s", reply.text)
+                # Tiene respuesta final: pasa a 'hablando'.
+                self._face.show(Expression.TALKING)
                 self._history.append(Message(role="assistant", content=reply.text))
                 return reply
 
@@ -93,6 +102,8 @@ class Agent:
             "corte de seguridad: se agotaron los %d pasos sin respuesta final",
             self._max_steps,
         )
+        # Algo salio mal: cara triste.
+        self._face.show(Expression.SAD)
         fallback = Utterance(
             text="(me colgue pidiendo tools, corte por seguridad)", speaker="bmo"
         )

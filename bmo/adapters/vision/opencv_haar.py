@@ -54,7 +54,7 @@ class OpenCVHaarVision(VisionPort):
             min_face_size=config.min_face_size,
         )
 
-    def analyze(self, frame: Any) -> Perception:
+    def analyze(self, frame: Any, question: str = "") -> Perception:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
 

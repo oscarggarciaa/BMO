@@ -35,26 +35,33 @@ class MoondreamVision(VisionPort):
     def from_config(cls, config: VisionConfig) -> "MoondreamVision":
         return cls(model=config.model, host=config.host, debug_path="last_look.jpg")
 
-    def analyze(self, frame: Any) -> Perception:
+    def analyze(self, frame: Any, question: str = "") -> Perception:
         import cv2
 
         ok, buffer = cv2.imencode(".jpg", frame)
         if not ok:
-            return Perception(description="no pude codificar la imagen")
+            return Perception(description="I couldn't encode the image")
 
         if self._debug_path is not None:
             with open(self._debug_path, "wb") as f:
                 f.write(buffer.tobytes())
+
+        prompt = self._prompt
+        if question.strip():
+            prompt = (
+                f"{question.strip()}\n"
+                "Answer in one short, simple sentence based on what you see."
+            )
 
         response = self._client.chat(
             model=self._model,
             messages=[
                 {
                     "role": "user",
-                    "content": self._prompt,
+                    "content": prompt,
                     "images": [buffer.tobytes()],
                 }
             ],
         )
         text = (response["message"].get("content") or "").strip()
-        return Perception(description=text or "no vi nada claro")
+        return Perception(description=text or "I didn't see anything clearly")

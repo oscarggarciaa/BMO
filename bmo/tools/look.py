@@ -10,21 +10,22 @@ from bmo.tools.tool import Tool
 def build_look_tool(camera: CameraSourcePort, vision: VisionPort) -> Tool:
     """Arma la tool `look` cableando una camara y una vision concretas."""
 
-    def look() -> str:
+    def look(question: str = "") -> str:
         frame = camera.capture()
         if frame is None:
-            return "no pude capturar imagen de la camara"
-        perception = vision.analyze(frame)
+            return "I couldn't capture an image from the camera"
+        perception = vision.analyze(frame, question=question)
         return perception.summary()
 
     return Tool(
         name="look",
         description=(
-            "Mira a traves de la camara y describe que ve BMO ahora mismo "
-            "(caras, ojos, sonrisas). Esta es la unica forma que tiene BMO de ver "
-            "o sacar una foto. Usala siempre que el usuario pida ver algo, mirar, "
-            "sacar o hacer una foto, o pregunte que ves, que hay adelante o quien "
-            "esta ahi."
+            "Look through the camera and describe what BMO sees right now "
+            "(faces, eyes, smiles). This is the ONLY way BMO has to see or take "
+            "a photo. Use it whenever the user asks to see something, to look, "
+            "to take a photo, or asks what you see, what is in front, or who is "
+            "there."
         ),
         func=look,
+        direct=True,
     )

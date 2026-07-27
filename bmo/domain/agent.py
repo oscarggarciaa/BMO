@@ -72,11 +72,15 @@ class Agent:
             )
             for call in decision.tool_calls:
                 logger.info("ejecutando tool '%s' con args=%s", call.name, call.arguments)
-                result = self._execute(call)
+                result = self._execute(call, question=text)
                 logger.info("tool '%s' devolvio: %s", call.name, result)
                 self._history.append(
                     Message(role="tool", content=result, name=call.name)
                 )
+                if self._tool_is_direct(call.name):
+                    logger.info("tool '%s' es directa: su resultado es la respuesta", call.name)
+                    self._face.show(Expression.TALKING)
+                    return Utterance(text=result, speaker="bmo")
 
         logger.warning(
             "corte de seguridad: se agotaron los %d pasos sin respuesta final",
@@ -89,7 +93,14 @@ class Agent:
         self._history.append(Message(role="assistant", content=fallback.text))
         return fallback
 
-    def _execute(self, call: ToolCall) -> str:
+    def _tool_is_direct(self, name: str) -> bool:
+        """True si la tool devuelve su resultado directo al usuario (sin releerlo el brain)."""
+        try:
+            return self._tools.get(name).direct
+        except KeyError:
+            return False
+
+    def _execute(self, call: ToolCall, question: str = "") -> str:
         """Ejecuta una tool y devuelve su resultado como texto para el brain.
 
         Los errores NO se propagan: se devuelven como texto para que el brain los
@@ -102,7 +113,7 @@ class Agent:
             return f"error: la tool '{call.name}' no existe"
 
         try:
-            return str(tool.run(**call.arguments))
+            return str(tool.run(question=question, **call.arguments))
         except Exception as exc:
             logger.exception("fallo ejecutando la tool '%s'", call.name)
             return f"error ejecutando '{call.name}': {exc}"

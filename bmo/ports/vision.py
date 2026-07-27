@@ -16,5 +16,9 @@ class VisionPort(ABC):
     """
 
     @abstractmethod
-    def analyze(self, frame: Any) -> Perception:
-        """Recibe un frame (array BGR) y devuelve la Perception detectada."""
+    def analyze(self, frame: Any, question: str = "") -> Perception:
+        """Recibe un frame (array BGR) y una pregunta opcional del usuario.
+
+        `question` da contexto al modelo de vision (por ejemplo, moondream).
+        Las visiones que no lo usan (OpenCV+Haar) simplemente lo ignoran.
+        """

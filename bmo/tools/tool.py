@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List
 
@@ -14,15 +15,22 @@ class Tool:
     - description: que hace (el LLM lo lee para decidir cuando usarla).
     - parameters: JSON-schema de los argumentos (formato tool-calling de Ollama).
     - func: la funcion Python real que ejecuta la accion.
+    - direct: si es True, el resultado de la tool ES la respuesta final para el
+      usuario y NO vuelve a pasar por el cerebro (evita el 'telefono descompuesto').
     """
 
     name: str
     description: str
     func: Callable[..., Any]
     parameters: Dict[str, Any] = field(default_factory=dict)
+    direct: bool = False
 
     def run(self, **kwargs: Any) -> Any:
-        return self.func(**kwargs)
+        sig = inspect.signature(self.func)
+        if any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()):
+            return self.func(**kwargs)
+        allowed = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        return self.func(**allowed)
 
     def to_schema(self) -> Dict[str, Any]:
         """Formato que espera Ollama/OpenAI para tool calling."""

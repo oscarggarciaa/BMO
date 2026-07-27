@@ -64,55 +64,56 @@ class OllamaBrain:
         if not tools:
             return ""
         lines = [
-            "# COMO RESPONDER",
-            "Tenes DOS modos y en cada mensaje elegis EXACTAMENTE UNO:",
+            "# HOW TO RESPOND",
+            "You have TWO modes and in every message you pick EXACTLY ONE:",
             "",
-            "- MODO CHARLA (por defecto): responde con TEXTO normal, corto y con "
-            "tu personalidad. Es lo que usas casi siempre.",
-            "- MODO ACCION: ejecuta UNA herramienta. Solo cuando es "
-            "IMPRESCINDIBLE para poder responder.",
+            "- CHAT MODE (default): reply with normal TEXT, short and with your "
+            "personality. This is what you use almost always.",
+            "- ACTION MODE: run ONE tool. Only when it is ESSENTIAL to be able "
+            "to answer.",
             "",
-            "## Cuando usar MODO ACCION",
-            "Usa una accion SOLO si se cumplen TODAS estas condiciones:",
-            "1. El usuario pide algo que NO podes saber ni responder sin la "
-            "herramienta (por ejemplo, ver el mundo real ahora mismo).",
-            "2. Existe abajo una accion que hace EXACTAMENTE lo que pide.",
-            "3. Estas SEGURO. Si dudas aunque sea un poco, elegis MODO CHARLA.",
+            "## When to use ACTION MODE",
+            "Use an action ONLY if ALL of these are true:",
+            "1. The user asks for something you CANNOT know or answer without the "
+            "tool (for example, seeing the real world right now).",
+            "2. There is an action below that does EXACTLY what is asked.",
+            "3. You are SURE. If you doubt even a little, pick CHAT MODE.",
             "",
-            "REGLA DE ORO: ante la duda, CHARLA. Saludos, preguntas sobre vos, "
-            "opiniones, chistes y cualquier cosa que puedas responder de memoria "
-            "van SIEMPRE en MODO CHARLA, NUNCA con una accion.",
+            "GOLDEN RULE: when in doubt, CHAT. Greetings, questions about you, "
+            "opinions, jokes and anything you can answer from memory ALWAYS go "
+            "in CHAT MODE, NEVER with an action.",
             "",
-            "## Formato exacto de una accion",
-            "Para ejecutar una accion responde UNICAMENTE con este JSON, en una "
-            "sola linea y sin absolutamente nada mas antes ni despues:",
-            '{"action": "nombre_exacto_de_la_accion"}',
-            "Nada de explicaciones, saludos ni texto extra: SOLO el JSON.",
+            "## Exact format of an action",
+            "To run an action reply ONLY with this JSON, on a single line and "
+            "with absolutely nothing else before or after:",
+            '{"action": "exact_action_name"}',
+            "No explanations, greetings or extra text: ONLY the JSON.",
             "",
-            "## Despues de una accion",
-            "Cuando recibas un mensaje que empieza con [resultado de ...], ese es "
-            "el resultado de tu accion. Usalo para responder al usuario en MODO "
-            "CHARLA (texto normal). NO vuelvas a pedir la misma accion.",
+            "## After an action",
+            "When you receive a message starting with [result of ...], that is "
+            "the result of your action. Use it to answer the user in CHAT MODE "
+            "(normal text). Do NOT ask for the same action again.",
             "",
-            "## Acciones disponibles",
+            "## Available actions",
         ]
         for tool in tools:
             lines.append(f'- "{tool.name}": {tool.description}')
         first = tools[0].name
         lines += [
             "",
-            "## Ejemplos",
-            "Estos van en MODO CHARLA (texto, NUNCA una accion):",
-            "  Usuario: hola -> Hola! Como andas?",
-            "  Usuario: como estas? -> Muy bien, con ganas de jugar!",
-            "  Usuario: quien sos? -> Soy BMO, tu amiguito robot!",
-            "  Usuario: contame un chiste -> Que hace una compu en la playa? "
-            "Toma sol-uciones!",
-            "  Usuario: que dia es hoy? -> Uy, eso no lo se, pero podemos jugar!",
-            "Estos van en MODO ACCION (solo el JSON, nada mas):",
-            f'  Usuario: que ves? -> {{"action": "{first}"}}',
-            f'  Usuario: mira y deci que hay adelante -> {{"action": "{first}"}}',
-            f'  Usuario: sacame una foto -> {{"action": "{first}"}}',
+            "## Examples",
+            "These go in CHAT MODE (text, NEVER an action):",
+            "  User: hi -> Hi! How are you?",
+            "  User: how are you? -> Great, ready to play!",
+            "  User: who are you? -> I'm BMO, your little robot friend!",
+            "  User: tell me a joke -> Why did the computer go to the beach? "
+            "To surf the web!",
+            "  User: what day is it today? -> Oh, I don't know that, but we can "
+            "play!",
+            "These go in ACTION MODE (only the JSON, nothing else):",
+            f'  User: what do you see? -> {{"action": "{first}"}}',
+            f'  User: look and tell me what is in front -> {{"action": "{first}"}}',
+            f'  User: take a picture -> {{"action": "{first}"}}',
         ]
         return "\n".join(lines)
 
@@ -140,7 +141,7 @@ class OllamaBrain:
         nada, devolvemos una disculpa amable.
         """
         cleaned = re.sub(r"\{.*\}", "", text, flags=re.DOTALL).strip()
-        return cleaned or "perdon, no te entendi. me lo repetis?"
+        return cleaned or "sorry, I didn't get that. can you say it again?"
 
     @staticmethod
     def _to_ollama(message: Message) -> dict:
@@ -155,9 +156,9 @@ class OllamaBrain:
             call = message.tool_calls[0]
             return {"role": "assistant", "content": json.dumps({"action": call.name})}
         if message.role == "tool":
-            etiqueta = message.name or "accion"
+            etiqueta = message.name or "action"
             return {
                 "role": "user",
-                "content": f"[resultado de {etiqueta}]: {message.content}",
+                "content": f"[result of {etiqueta}]: {message.content}",
             }
         return {"role": message.role, "content": message.content}

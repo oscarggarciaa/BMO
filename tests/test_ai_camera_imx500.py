@@ -15,6 +15,7 @@ import numpy as np
 from bmo import main as composition_root
 from bmo.adapters.camera.ai_camera_imx500 import (
     AiCameraImx500,
+    MAX_METADATA_TRIES,
     build_perception,
     prepare_boxes,
 )
@@ -150,6 +151,78 @@ def test_analyze_returns_empty_perception_when_not_started() -> None:
     adapter = AiCameraImx500(size=(640, 480), rpk_path="x.rpk")
 
     assert adapter.analyze("frame").detections == []
+
+
+# --- analyze reintenta hasta agarrar un frame con tensor de inferencia -------
+
+
+class _FakePicam2:
+    """Picamera2 falso: cada capture_metadata devuelve un dict distinto."""
+
+    def __init__(self) -> None:
+        self.metadata_calls = 0
+
+    def capture_metadata(self):
+        self.metadata_calls += 1
+        return {"frame": self.metadata_calls}
+
+
+class _FakeImx500:
+    """IMX500 falso: get_outputs devuelve una secuencia (None hasta que hay tensor)."""
+
+    def __init__(self, outputs_sequence) -> None:
+        self._seq = list(outputs_sequence)
+        self.calls = 0
+
+    def get_outputs(self, metadata, add_batch=False):
+        idx = min(self.calls, len(self._seq) - 1)
+        self.calls += 1
+        return self._seq[idx]
+
+    def get_input_size(self):
+        return (300, 300)
+
+    def convert_inference_coords(self, coords, metadata, picam2):
+        x, y, w, h = coords
+        return (int(x), int(y), int(w), int(h))
+
+
+def _valid_outputs() -> tuple:
+    # Forma real: cada tensor viene batched -> (1, N, ...). analyze hace [0].
+    boxes = np.array([[[0.0, 0.0, 10.0, 10.0]]])
+    scores = np.array([[0.9]])
+    classes = np.array([[0]])
+    return (boxes, scores, classes)
+
+
+def _wire_fake_hardware(adapter, picam2, imx500) -> None:
+    adapter._picam2 = picam2
+    adapter._imx500 = imx500
+    adapter._intrinsics = None
+    adapter._labels = ["person"]
+    adapter._threshold = 0.5
+
+
+def test_analyze_retries_until_outputs_are_available() -> None:
+    adapter = AiCameraImx500(size=(640, 480), rpk_path="x.rpk")
+    imx500 = _FakeImx500([None, None, _valid_outputs()])
+    _wire_fake_hardware(adapter, _FakePicam2(), imx500)
+
+    perception = adapter.analyze(None)
+
+    assert perception.labels() == ["person"]
+    assert imx500.calls == 3  # reintento en los 2 frames sin tensor
+
+
+def test_analyze_returns_empty_when_no_frame_ever_has_a_tensor() -> None:
+    adapter = AiCameraImx500(size=(640, 480), rpk_path="x.rpk")
+    imx500 = _FakeImx500([None])
+    _wire_fake_hardware(adapter, _FakePicam2(), imx500)
+
+    perception = adapter.analyze(None)
+
+    assert perception.detections == []
+    assert imx500.calls == MAX_METADATA_TRIES  # reintenta un numero acotado de veces
 
 
 def test_stop_is_safe_when_never_started() -> None:

@@ -20,6 +20,11 @@ from bmo.ports.vision import VisionPort
 
 _LOG = logging.getLogger(__name__)
 
+# No todos los frames del IMX500 traen el tensor de inferencia adjunto: en los
+# que no, get_outputs() devuelve None. analyze() reintenta hasta este numero de
+# frames para agarrar uno con deteccion fresca antes de rendirse.
+MAX_METADATA_TRIES = 15
+
 
 def build_perception(
     boxes: Iterable[Any],
@@ -74,7 +79,7 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
         self,
         size: tuple[int, int],
         rpk_path: str,
-        threshold: float = 0.55,
+        threshold: float = 0.25,
         fmt: str = "RGB888",
     ) -> None:
         self._size = size
@@ -136,9 +141,16 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
         if self._picam2 is None or self._imx500 is None:
             return Perception()
 
-        metadata = self._picam2.capture_metadata()
-        # add_batch=True: los tensores vienen como (1, N, ...); [0] saca el batch.
-        np_outputs = self._imx500.get_outputs(metadata, add_batch=True)
+        # No todos los frames traen el tensor de inferencia; reintentamos unos
+        # cuantos hasta agarrar uno con datos (si no, "veo: nada" todo el tiempo).
+        np_outputs = None
+        metadata = None
+        for _ in range(MAX_METADATA_TRIES):
+            metadata = self._picam2.capture_metadata()
+            # add_batch=True: los tensores vienen como (1, N, ...); [0] saca el batch.
+            np_outputs = self._imx500.get_outputs(metadata, add_batch=True)
+            if np_outputs is not None:
+                break
         if np_outputs is None:
             return Perception()
 

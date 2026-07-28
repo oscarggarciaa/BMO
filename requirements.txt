@@ -9,8 +9,10 @@ opencv-python>=4.8     # detección Haar (CPU). Reemplazable por AI Camera IMX50
 # --- Cerebro (Fase 3) ---
 ollama>=0.3.0          # cliente del LLM local con tool calling
 
-# --- Web debug (Fase 6) ---
-Flask>=3.0
+# --- Cara en pantalla (Fase 6) ---
+Pillow>=10.0           # carga y escalado de los frames PNG para tkinter
+# En la Raspberry (venv con --system-site-packages) ImageTk NO viene con pip:
+#   sudo apt install python3-pil.imagetk
 
 # --- Tests ---
 pytest>=8.0

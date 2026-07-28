@@ -28,6 +28,12 @@ class VisionConfig:
     min_face_size: int = 80
     model: str = "moondream"
     host: str = "http://localhost:11434"
+    # ai_camera_imx500: .rpk del modelo on-sensor y umbral de confianza
+    rpk_path: str = (
+        "/usr/share/imx500-models/"
+        "imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
+    )
+    threshold: float = 0.55
 
 
 @dataclass(frozen=True)
@@ -38,10 +44,10 @@ class BrainConfig:
 
 
 @dataclass(frozen=True)
-class WebConfig:
+class ScreenConfig:
     enabled: bool = True
-    host: str = "0.0.0.0"
-    port: int = 5000
+    fullscreen: bool = True
+    fps: int = 4
 
 
 @dataclass(frozen=True)
@@ -49,7 +55,7 @@ class Config:
     camera: CameraConfig
     vision: VisionConfig
     brain: BrainConfig
-    web: WebConfig
+    screen: ScreenConfig
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Config":
@@ -58,7 +64,7 @@ class Config:
             camera=CameraConfig(**data.get("camera", {})),
             vision=VisionConfig(**data.get("vision", {})),
             brain=BrainConfig(**data.get("brain", {})),
-            web=WebConfig(**data.get("web", {})),
+            screen=ScreenConfig(**data.get("screen", {})),
         )
 
     @classmethod

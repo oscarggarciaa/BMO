@@ -8,13 +8,18 @@
 # =============================================================================
 
 camera:
-  adapter: picamera2          # futuro: usb | ai_camera_imx500
+  adapter: ai_camera_imx500   # picamera2 (camara normal) | usb | ai_camera_imx500 (inferencia on-sensor)
   width: 1296
   height: 972
   format: RGB888
 
 vision:
-  adapter: moondream          # opencv_haar (solo caras) | moondream (ve la escena) | futuro: ai_camera_imx500
+  adapter: ai_camera_imx500   # opencv_haar (solo caras) | moondream (describe la escena) | ai_camera_imx500 (deteccion on-sensor)
+  # --- ai_camera_imx500: la deteccion corre DENTRO del sensor (IMX500) ---
+  # OJO: camara y vision deben ser AMBAS ai_camera_imx500 (es un solo dispositivo).
+  rpk_path: /usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk
+  threshold: 0.55             # confianza minima para contar una deteccion
+  # --- moondream (fallback multimodal por Ollama) ---
   model: moondream            # modelo multimodal de Ollama que describe la imagen
   host: http://localhost:11434
   models_path: /home/oscar/Desktop/bmo/models
@@ -25,7 +30,7 @@ brain:
   model: gemma3:1b            # con el protocolo JSON no hace falta un modelo grande
   host: http://localhost:11434
 
-web:                          # interfaz de debug (solo monitoreo)
+screen:                       # cara de BMO directo en la pantalla fisica (tkinter)
   enabled: true
-  host: 0.0.0.0
-  port: 5000
+  fullscreen: true
+  fps: 4

@@ -26,8 +26,6 @@ class VisionConfig:
     adapter: str = "opencv_haar"
     models_path: str = "models"
     min_face_size: int = 80
-    model: str = "moondream"
-    host: str = "http://localhost:11434"
     # ai_camera_imx500: .rpk del modelo on-sensor y umbral de confianza
     rpk_path: str = (
         "/usr/share/imx500-models/"

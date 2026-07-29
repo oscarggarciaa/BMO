@@ -5,7 +5,12 @@ from __future__ import annotations
 from typing import List
 
 from bmo.domain.agent import Agent
-from bmo.domain.models import BrainDecision, Perception, ToolCall
+from bmo.domain.models import (
+    BrainDecision,
+    Perception,
+    ToolCall,
+    Utterance,
+)
 from bmo.ports.vision import VisionPort
 from bmo.tools.look import build_look_tool
 from bmo.tools.tool import Tool, ToolRegistry
@@ -61,9 +66,10 @@ def test_tool_direct_defaults_false() -> None:
     assert tool.direct is False
 
 
-def test_look_tool_is_direct() -> None:
+def test_look_tool_is_not_direct() -> None:
+    # look NO es directa: su resultado vuelve al cerebro para que lo narre.
     tool = build_look_tool(FakeCamera(), RecordingVision())
-    assert tool.direct is True
+    assert tool.direct is False
 
 
 def test_look_passes_question_to_vision() -> None:
@@ -73,20 +79,35 @@ def test_look_passes_question_to_vision() -> None:
     assert vision.questions == ["hay alguien con barba?"]
 
 
-def test_direct_tool_result_is_the_reply_without_second_brain_call() -> None:
-    vision = RecordingVision(description="veo una silla azul")
-    brain = ScriptedBrain([BrainDecision(tool_calls=(ToolCall(name="look"),))])
+def test_look_result_is_sent_to_brain_which_narrates() -> None:
+    vision = RecordingVision(description="veo: person x1, chair x2")
+    brain = ScriptedBrain(
+        [
+            BrainDecision(tool_calls=(ToolCall(name="look"),)),
+            BrainDecision(
+                reply=Utterance(text="I see a person and two chairs!", speaker="bmo")
+            ),
+        ]
+    )
     agent = Agent(brain=brain, tools=_registry(FakeCamera(), vision))
 
-    reply = agent.ask("que ves?")
+    reply = agent.ask("what do you see?")
 
-    assert reply.text == "veo una silla azul"
-    assert brain.calls == 1
+    # El cerebro hace una SEGUNDA pasada narrando lo que la vision reporto.
+    assert reply.text == "I see a person and two chairs!"
+    assert brain.calls == 2
+    tool_msgs = [m for m in agent.history if m.role == "tool" and m.name == "look"]
+    assert tool_msgs and tool_msgs[0].content == "veo: person x1, chair x2"
 
 
 def test_agent_forwards_user_question_to_look() -> None:
     vision = RecordingVision()
-    brain = ScriptedBrain([BrainDecision(tool_calls=(ToolCall(name="look"),))])
+    brain = ScriptedBrain(
+        [
+            BrainDecision(tool_calls=(ToolCall(name="look"),)),
+            BrainDecision(reply=Utterance(text="ok", speaker="bmo")),
+        ]
+    )
     agent = Agent(brain=brain, tools=_registry(FakeCamera(), vision))
 
     agent.ask("hay un libro rojo?")

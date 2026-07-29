@@ -14,8 +14,7 @@ def build_look_tool(camera: CameraSourcePort, vision: VisionPort) -> Tool:
         frame = camera.capture()
         if frame is None:
             return "I couldn't capture an image from the camera"
-        perception = vision.analyze(frame, question=question)
-        return perception.summary()
+        return vision.analyze(frame, question=question).summary()
 
     return Tool(
         name="look",
@@ -27,5 +26,5 @@ def build_look_tool(camera: CameraSourcePort, vision: VisionPort) -> Tool:
             "there."
         ),
         func=look,
-        direct=True,
+        direct=False,
     )

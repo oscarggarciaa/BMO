@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any, List, Optional, Set
 
@@ -25,6 +26,25 @@ class OllamaBrain:
     @classmethod
     def from_config(cls, config: BrainConfig) -> "OllamaBrain":
         return cls(model=config.model, host=config.host)
+
+    def warm_up(self) -> None:
+        """Carga el modelo en RAM con una consulta minima al arrancar.
+
+        La primera inferencia de Ollama paga un cold-start (carga el modelo a
+        memoria, ~64s la primera vez). Haciendolo aca, en el arranque, la
+        primera pregunta real del usuario ya sale caliente. Si Ollama todavia
+        no esta listo, se traga el error: el warm-up no debe tumbar a BMO.
+        """
+        try:
+            self._client.chat(
+                model=self._model,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "warm-up del modelo fallo (Ollama no listo?); sigo igual",
+                exc_info=True,
+            )
 
     def decide(self, messages: List[Message], tools: List[Tool]) -> BrainDecision:
         ollama_messages = [self._to_ollama(m) for m in messages]

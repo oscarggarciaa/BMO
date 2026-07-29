@@ -1,6 +1,6 @@
 """Adapter de la Raspberry Pi AI Camera (Sony IMX500): inferencia on-sensor.
 
-A diferencia de picamera2_source + moondream, el IMX500 ACOPLA camara e
+A diferencia de una camara normal + vision aparte, el IMX500 ACOPLA camara e
 inferencia: la red neuronal corre DENTRO del sensor y las detecciones salen del
 metadata de su propio pipeline, no de un frame arbitrario. Ademas `IMX500(...)`
 debe crearse ANTES que `Picamera2()`. Por eso es UN solo adapter que cumple los

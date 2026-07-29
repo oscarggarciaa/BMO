@@ -19,6 +19,6 @@ class VisionPort(ABC):
     def analyze(self, frame: Any, question: str = "") -> Perception:
         """Recibe un frame (array BGR) y una pregunta opcional del usuario.
 
-        `question` da contexto al modelo de vision (por ejemplo, moondream).
+        `question` da contexto al modelo de vision cuando lo soporta.
         Las visiones que no lo usan (OpenCV+Haar) simplemente lo ignoran.
         """

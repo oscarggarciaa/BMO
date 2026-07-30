@@ -33,6 +33,13 @@ voice:                        # BMO habla por los altavoces (TTS)
   device: "plughw:2,0"    
   sample_rate: 22050         # coincide con el sample_rate del modelo bmo.onnx (22050 Hz)
 
+hearing:                      # BMO escucha por el microfono (STT + wake-word)
+  adapter: vosk              # none (sordo) | vosk (STT neuronal offline)
+  model_path: models/vosk-model-small-en-us-0.15  # descargar de alphacephei.com/vosk/models
+  device: "plughw:2,0"       # mismo combo USB que el parlante (arecord -D)
+  sample_rate: 16000         # 16kHz: el estandar para speech-to-text
+  wake_word: hello           # la palabra magica que despierta a BMO
+
 screen:                       # cara de BMO directo en la pantalla fisica (tkinter)
   enabled: true
   fullscreen: true

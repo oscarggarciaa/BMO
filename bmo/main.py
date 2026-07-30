@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING, Callable, Optional
 from bmo.config import Config
 from bmo.domain.agent import Agent
 from bmo.domain.models import Expression
+from bmo.domain.wakeword import WakeWord
 from bmo.ports.camera import CameraSourcePort
 from bmo.ports.face import FacePort
+from bmo.ports.hearing import HearingPort
 from bmo.ports.vision import VisionPort
 from bmo.ports.voice import VoicePort
 from bmo.tools.look import build_look_tool
@@ -119,6 +121,19 @@ def build_voice(config: Config) -> Optional[VoicePort]:
     return None
 
 
+def build_hearing(config: Config) -> Optional[HearingPort]:
+    """Factory del oido: arma Vosk si esta habilitado (import lazy).
+
+    Si `hearing.adapter` es 'none', devuelve None y BMO corre sordo (solo
+    entrada por teclado, el bucle de escucha por microfono no arranca).
+    """
+    if config.hearing.adapter == "vosk":
+        from bmo.adapters.hearing.vosk_hearing import VoskHearing
+
+        return VoskHearing.from_config(config.hearing)
+    return None
+
+
 def build_agent(
     brain,
     camera: CameraSourcePort,
@@ -173,6 +188,40 @@ def repl(agent: Agent, face: Optional[FacePort] = None) -> None:
             face.stop()
 
 
+def listen_loop(
+    agent: Agent,
+    hearing: HearingPort,
+    wake: WakeWord,
+    face: Optional[FacePort] = None,
+) -> None:
+    """Bucle de conversacion por microfono: despierta con la wake-word.
+
+    Escucha en continuo; SOLO cuando lo oido arranca con la palabra magica
+    ('hello') le pasa el comando al agente. Decir 'hello' solo (sin comando)
+    dispara un saludo. Ctrl+C corta el bucle y cierra la cara.
+    """
+    print("BMO escuchando. Deci 'hello' para despertarlo (Ctrl+C para salir).")
+    try:
+        while True:
+            if face is not None:
+                face.show(Expression.LISTENING)
+            transcript = hearing.listen()
+            command = wake.detect(transcript)
+            if command is None:
+                continue  # sin wake-word: BMO sigue dormido
+            try:
+                reply = agent.ask(command or "hello")
+                print(f"BMO> {reply.text}")
+            except Exception:
+                logging.getLogger(__name__).exception("fallo procesando la voz")
+                print("BMO> (uy, algo se me rompio, mira el log de arriba)")
+    except (KeyboardInterrupt, EOFError):
+        print()
+    finally:
+        if face is not None:
+            face.stop()
+
+
 def warm_up_then_serve(
     brain,
     serve: Callable[[], None],
@@ -205,7 +254,15 @@ def main() -> None:
     brain = build_brain(config)
     face = build_face(config)
     voice = build_voice(config)
+    hearing = build_hearing(config)
     agent = build_agent(brain, camera, vision, face, voice)
+
+    # Si hay microfono, BMO conversa por voz (wake-word 'hello'); si no, por teclado.
+    if hearing is not None and hearing.available:
+        wake = WakeWord(config.hearing.wake_word)
+        serve: Callable[[], None] = lambda: listen_loop(agent, hearing, wake, face)
+    else:
+        serve = lambda: repl(agent, face)
 
     camera.start()
     if face is not None:
@@ -219,7 +276,7 @@ def main() -> None:
         def boot() -> None:
             warm_up_then_serve(
                 brain,
-                serve=lambda: repl(agent, face),
+                serve=serve,
                 on_warmup_start=lambda: face.show(Expression.WARMUP),
             )
 
@@ -235,7 +292,7 @@ def main() -> None:
         try:
             warm_up_then_serve(
                 brain,
-                serve=lambda: repl(agent, face),
+                serve=serve,
                 on_warmup_start=lambda: print(
                     "Calentando el modelo (primera carga en RAM)..."
                 ),

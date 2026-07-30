@@ -50,6 +50,15 @@ class VoiceConfig:
 
 
 @dataclass(frozen=True)
+class HearingConfig:
+    adapter: str = "none"  # none (sordo) | vosk (STT offline)
+    model_path: str = "models/vosk-model-small-en-us-0.15"
+    device: str = ""  # arecord -D (p. ej. plughw:2,0 para la placa USB); vacio = default
+    sample_rate: int = 16000  # 16kHz: el estandar para speech-to-text
+    wake_word: str = "hello"  # la palabra magica que despierta a BMO
+
+
+@dataclass(frozen=True)
 class ScreenConfig:
     enabled: bool = True
     fullscreen: bool = True
@@ -62,6 +71,7 @@ class Config:
     vision: VisionConfig
     brain: BrainConfig
     voice: VoiceConfig
+    hearing: HearingConfig
     screen: ScreenConfig
 
     @classmethod
@@ -72,6 +82,7 @@ class Config:
             vision=VisionConfig(**data.get("vision", {})),
             brain=BrainConfig(**data.get("brain", {})),
             voice=VoiceConfig(**data.get("voice", {})),
+            hearing=HearingConfig(**data.get("hearing", {})),
             screen=ScreenConfig(**data.get("screen", {})),
         )
 

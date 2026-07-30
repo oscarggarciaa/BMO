@@ -14,6 +14,15 @@ ollama>=0.3.0          # cliente del LLM local con tool calling
 #   pip install piper-tts   y descargar un modelo .onnx (+ .onnx.json), p. ej. en_US-lessac-medium
 #   La reproduccion usa `aplay` (viene con alsa-utils: sudo apt install alsa-utils)
 
+# --- Oido / STT (wake-word 'hello') ---
+# vosk                # SOLO en la Pi: STT neuronal offline (reconocimiento de voz)
+#   pip install vosk
+#   Descargar el modelo small en-us (~40MB) y descomprimir en models/:
+#     cd models
+#     wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+#     unzip vosk-model-small-en-us-0.15.zip
+#   La captura usa `arecord` (viene con alsa-utils)
+
 # --- Cara en pantalla (Fase 6) ---
 Pillow>=10.0           # carga y escalado de los frames PNG para tkinter
 # En la Raspberry (venv con --system-site-packages) ImageTk NO viene con pip:

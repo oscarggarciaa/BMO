@@ -23,6 +23,7 @@ from bmo.config import (
     BrainConfig,
     CameraConfig,
     Config,
+    HearingConfig,
     ScreenConfig,
     VisionConfig,
     VoiceConfig,
@@ -256,6 +257,7 @@ def _imx500_config() -> Config:
         vision=VisionConfig(adapter="ai_camera_imx500", rpk_path="x.rpk"),
         brain=BrainConfig(),
         voice=VoiceConfig(),
+        hearing=HearingConfig(),
         screen=ScreenConfig(enabled=False),
     )
 

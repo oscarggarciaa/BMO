@@ -7,6 +7,7 @@ loop de tkinter y la carga con PIL se prueban a mano en la Pi, no aca.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from bmo.domain.models import Expression
@@ -26,6 +27,22 @@ def test_show_updates_current_expression() -> None:
     face.show(Expression.HAPPY)
 
     assert face.current is Expression.HAPPY
+
+
+def test_handle_touch_runs_registered_callback_in_a_thread() -> None:
+    face = TkFace(faces_dir=_FACES_DIR)
+    fired = threading.Event()
+    face.set_on_touch(fired.set)
+
+    face._handle_touch()
+
+    assert fired.wait(timeout=1)
+
+
+def test_handle_touch_without_callback_is_noop() -> None:
+    face = TkFace(faces_dir=_FACES_DIR)
+
+    assert face._handle_touch() is None
 
 
 def test_frames_for_returns_sorted_pngs() -> None:

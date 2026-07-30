@@ -28,12 +28,7 @@ class OllamaBrain:
         return cls(model=config.model, host=config.host)
 
     def warm_up(self) -> None:
-        """Carga el modelo en RAM con una consulta minima al arrancar.
-
-        La primera inferencia de Ollama paga un cold-start (carga el modelo a
-        memoria, ~64s la primera vez). Haciendolo aca, en el arranque, la
-        primera pregunta real del usuario ya sale caliente. Si Ollama todavia
-        no esta listo, se traga el error: el warm-up no debe tumbar a BMO.
+        """Carga el modelo en RAM con una consulta mínima al arrancar.
         """
         try:
             self._client.chat(
@@ -42,7 +37,7 @@ class OllamaBrain:
             )
         except Exception:
             logging.getLogger(__name__).warning(
-                "warm-up del modelo fallo (Ollama no listo?); sigo igual",
+                "el warm-up del modelo falló (Ollama no está listo); continúo igual",
                 exc_info=True,
             )
 
@@ -77,9 +72,6 @@ class OllamaBrain:
     @staticmethod
     def _build_action_protocol(tools: List[Tool]) -> str:
         """Arma las instrucciones de tool-calling por prompt desde las tools.
-
-        Dinamico: si maniana agregas una tool nueva, el protocolo se actualiza
-        solo. El modelo lee esto para saber que puede hacer y como pedirlo.
         """
         if not tools:
             return ""
@@ -139,7 +131,7 @@ class OllamaBrain:
 
     @staticmethod
     def _extract_action(text: str, valid_names: Set[str]) -> Optional[str]:
-        """Busca un JSON {"action": "..."} en el texto y valida la accion."""
+        """Busca un JSON {"action": "..."} en el texto y valida la acción."""
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if not match:
             return None
@@ -155,10 +147,6 @@ class OllamaBrain:
     @staticmethod
     def _clean_reply(text: str) -> str:
         """Limpia bloques JSON residuales de una respuesta de texto.
-
-        Si el modelo tira un JSON con una accion invalida (o texto + JSON basura),
-        no queremos escupirle el JSON crudo al usuario. Lo sacamos; si no queda
-        nada, devolvemos una disculpa amable.
         """
         cleaned = re.sub(r"\{.*\}", "", text, flags=re.DOTALL).strip()
         return cleaned or "sorry, I didn't get that. can you say it again?"
@@ -166,11 +154,6 @@ class OllamaBrain:
     @staticmethod
     def _to_ollama(message: Message) -> dict:
         """Traduce un Message del dominio al formato que espera este modelo.
-
-        Como NO usamos tool-calling nativo, traducimos el historial a texto puro:
-        - el turno del assistant que pidio una accion se reconstruye como el JSON
-          que "dijo", para que el historial sea coherente;
-        - el resultado de una tool se pasa como mensaje de usuario etiquetado.
         """
         if message.role == "assistant" and message.tool_calls:
             call = message.tool_calls[0]

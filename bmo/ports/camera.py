@@ -1,4 +1,4 @@
-"""Port de la fuente de camara: entrega frames crudos."""
+"""Port de la fuente de cámara: entrega frames crudos."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 
 
 class CameraSourcePort(ABC):
-    """Fuente de imagen. Implementaciones: picamera2 hoy, USB o AI Camera manana."""
+    """Fuente de imagen. Implementaciones: picamera2 hoy, USB o AI Camera mañana."""
 
     @abstractmethod
     def start(self) -> None:
@@ -15,7 +15,7 @@ class CameraSourcePort(ABC):
 
     @abstractmethod
     def capture(self) -> Any:
-        """Devuelve el ultimo frame como array (formato BGR, listo para OpenCV).
+        """Devuelve el último frame como array (formato BGR, listo para OpenCV).
 
         Retorna None si no hay frame disponible.
         """

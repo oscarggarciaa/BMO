@@ -12,7 +12,7 @@ from typing import Callable, List
 from bmo.adapters.hearing.vosk_hearing import VoskHearing
 from bmo.domain.models import Utterance
 from bmo.domain.wakeword import WakeWord
-from bmo.main import listen_loop
+from bmo.interfaces.microphone import listen_loop
 from bmo.ports.hearing import HearingPort, NullHearing
 
 

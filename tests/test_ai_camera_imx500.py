@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from bmo import main as composition_root
+from bmo import builder as composition_root
 from bmo.adapters.camera.ai_camera_imx500 import (
     AiCameraImx500,
     MAX_METADATA_TRIES,

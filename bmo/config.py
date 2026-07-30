@@ -43,19 +43,19 @@ class BrainConfig:
 
 @dataclass(frozen=True)
 class VoiceConfig:
-    adapter: str = "none"  # none (muda) | piper (TTS neuronal offline)
+    adapter: str = "none"  # none (sin voz) | piper (TTS neuronal offline)
     model_path: str = "models/en_US-lessac-medium.onnx"
-    device: str = ""  # aplay -D (p. ej. plughw:1,0 para la placa USB); vacio = default
+    device: str = ""  # aplay -D (p. ej. plughw:1,0 para la placa USB); vacío = default
     sample_rate: int = 22050
 
 
 @dataclass(frozen=True)
 class HearingConfig:
-    adapter: str = "none"  # none (sordo) | vosk (STT offline)
+    adapter: str = "none"  # none (sin micrófono) | vosk (STT offline)
     model_path: str = "models/vosk-model-small-en-us-0.15"
-    device: str = ""  # arecord -D (p. ej. plughw:2,0 para la placa USB); vacio = default
-    sample_rate: int = 16000  # 16kHz: el estandar para speech-to-text
-    wake_word: str = "hello"  # la palabra magica que despierta a BMO
+    device: str = ""  # arecord -D (p. ej. plughw:2,0 para la placa USB); vacío = default
+    sample_rate: int = 16000  # 16kHz: el estándar para speech-to-text
+    wake_word: str = "hello"  # la palabra que activa a BMO
 
 
 @dataclass(frozen=True)

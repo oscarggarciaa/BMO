@@ -1,4 +1,4 @@
-"""Agente: orquesta la conversacion entre el humano, el brain y las tools."""
+"""Agente: orquesta la conversación entre el humano, el brain y las tools."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Agent:
-    """Orquesta la conversacion entre el humano, el brain y las tools."""
+    """Orquesta la conversación entre el humano, el brain y las tools."""
 
     def __init__(
         self,
@@ -36,35 +36,39 @@ class Agent:
 
     @property
     def history(self) -> List[Message]:
-        """Copia de la memoria de conversacion (solo lectura)."""
+        """Copia de la memoria de conversación (solo lectura)."""
         return list(self._history)
 
     def ask(self, text: str) -> Utterance:
         """Le pregunta algo a BMO y devuelve su respuesta final.
 
         Corre el loop decide -> ejecuta tools -> decide, hasta que el brain
-        responde sin pedir mas tools (o hasta agotar max_steps).
+        responde sin pedir más tools (o hasta agotar max_steps).
         """
+        # añadir al historial
         self._history.append(Message(role="user", content=text))
-        logger.info("USER pregunto: %s", text)
+        logger.info("USER preguntó: %s", text)
         self._face.show(Expression.THINKING)
 
         for step in range(self._max_steps):
-            logger.info("paso %d/%d: BMO esta pensando...", step + 1, self._max_steps)
+            logger.info("paso %d/%d: BMO está pensando...", step + 1, self._max_steps)
+            # el brain decide qué hacer
             decision = self._brain.decide(self._history, self._tools.all())
 
             if not decision.wants_tools:
                 reply = decision.reply or Utterance(text="", speaker="bmo")
-                logger.info("BMO decidio responder: %s", reply.text)
+                logger.info("BMO decidió responder: %s", reply.text)
+                # contestación por voz
                 self._voice.speak(
                     reply.text,
                     on_audio_start=lambda: self._face.show(Expression.TALKING),
                 )
+                # añadir respuesta
                 self._history.append(Message(role="assistant", content=reply.text))
                 return reply
 
             logger.info(
-                "BMO decidio usar %d tool(s): %s",
+                "BMO decidió usar %d tool(s): %s",
                 len(decision.tool_calls),
                 ", ".join(c.name for c in decision.tool_calls),
             )
@@ -76,13 +80,15 @@ class Agent:
                     tool_calls=decision.tool_calls,
                 )
             )
+            # para ejecutar una tool el brain nos pasa una respuesta con el action que quiere ejecutar
             for call in decision.tool_calls:
                 logger.info("ejecutando tool '%s' con args=%s", call.name, call.arguments)
                 result = self._execute(call, question=text)
-                logger.info("tool '%s' devolvio: %s", call.name, result)
+                logger.info("tool '%s' devolvió: %s", call.name, result)
                 self._history.append(
                     Message(role="tool", content=result, name=call.name)
                 )
+                # respuesta de la tool = respuesta que mostramos por pantalla
                 if self._tool_is_direct(call.name):
                     logger.info("tool '%s' es directa: su resultado es la respuesta", call.name)
                     self._voice.speak(
@@ -97,7 +103,7 @@ class Agent:
         )
         self._face.show(Expression.SAD)
         fallback = Utterance(
-            text="(me colgue pidiendo tools, corte por seguridad)", speaker="bmo"
+            text="(se agotaron los pasos sin respuesta, corte de seguridad)", speaker="bmo"
         )
         self._history.append(Message(role="assistant", content=fallback.text))
         return fallback
@@ -113,7 +119,7 @@ class Agent:
         """Ejecuta una tool y devuelve su resultado como texto para el brain.
 
         Los errores NO se propagan: se devuelven como texto para que el brain los
-        vea y decida que hacer (reintentar, disculparse, usar otra tool...).
+        vea y decida qué hacer (reintentar, disculparse, usar otra tool...).
         """
         try:
             tool = self._tools.get(call.name)

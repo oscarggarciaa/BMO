@@ -29,9 +29,9 @@ class VoicePort(ABC):
 class NullVoice(VoicePort):
     """Voz que no hace nada.
 
-    Patron Null Object: cuando no hay altavoces (tests, consola muda), el agente
+    Patrón Null Object: cuando no hay altavoces (tests, consola sin voz), el agente
     igual llama a `voice.speak(...)` sin tener que preguntar `if voice is not None`.
-    Aun sin audio, dispara `on_audio_start` al instante para que la cara igual
+    Aún sin audio, dispara `on_audio_start` al instante para que la cara igual
     pueda cambiar a TALKING (la parte visual no depende de tener parlantes).
     """
 

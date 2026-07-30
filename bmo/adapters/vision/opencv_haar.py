@@ -13,7 +13,7 @@ from bmo.ports.vision import VisionPort
 
 
 class Cascade(Protocol):
-    """Contrato minimo de un clasificador Haar (lo que usamos de cv2)."""
+    """Contrato mínimo de un clasificador Haar (lo que usamos de cv2)."""
 
     def detectMultiScale(self, image: Any, *args: Any, **kwargs: Any) -> Any: ...
 

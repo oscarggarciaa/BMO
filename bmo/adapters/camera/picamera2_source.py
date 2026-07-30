@@ -27,10 +27,10 @@ class Picamera2Source(CameraSourcePort):
                 )
             )
             self._picam2.start()
-        except Exception:  # noqa: BLE001 - sin camara, BMO sigue vivo pero ciego
+        except Exception:  # noqa: BLE001 - sin cámara, BMO sigue funcionando sin visión
             self._picam2 = None
             _LOG.warning(
-                "no se pudo inicializar la camara; BMO sigue funcionando sin vista"
+                "no se pudo inicializar la cámara; BMO sigue funcionando sin visión"
             )
 
     def capture(self) -> Any:

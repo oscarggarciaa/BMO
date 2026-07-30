@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 @dataclass(frozen=True)
 class BoundingBox:
-    """Rectangulo en coordenadas absolutas del frame."""
+    """Rectángulo en coordenadas absolutas del frame."""
 
     x: int
     y: int
@@ -29,8 +29,8 @@ class Detection:
 class Perception:
     """Lo que BMO 've' en un instante: la lista de detecciones.
 
-    Es el resultado puro de la vision, SIN pixeles dibujados. El agente razona
-    sobre esto; la capa de presentacion (web/debug) es la que dibuja cajas.
+    Es el resultado puro de la visión, SIN píxeles dibujados. El agente razona
+    sobre esto; la capa de presentación (web/debug) es la que dibuja cajas.
     """
 
     detections: List[Detection] = field(default_factory=list)
@@ -46,7 +46,7 @@ class Perception:
         return conteo
 
     def summary(self) -> str:
-        """Texto legible de lo que se ve, util para el cerebro y el HUD."""
+        """Texto legible de lo que se ve, útil para el cerebro y el HUD."""
         if self.description:
             return self.description
         conteo = self.count_by_label()
@@ -57,7 +57,7 @@ class Perception:
 
 @dataclass(frozen=True)
 class Utterance:
-    """Algo dicho: por el humano (escuchado via STT) o por BMO."""
+    """Algo dicho: por el humano (escuchado vía STT) o por BMO."""
 
     text: str
     speaker: str = "human"
@@ -72,16 +72,17 @@ class Expression(str, Enum):
     TALKING = "talking"
     THINKING = "thinking"
     SAD = "sad"
+    ANGRY = "angry"
     CAPTURING = "capturing"
     WARMUP = "warmup"
 
 
 @dataclass(frozen=True)
 class ToolCall:
-    """Una decision del brain: 'ejecuta la tool `name` con estos `arguments`'.
+    """Una decisión del brain: 'ejecuta la tool `name` con estos `arguments`'.
 
-    OJO: el brain solo DECIDE la llamada, no la ejecuta. El agente es quien
-    corre la tool de verdad y le devuelve el resultado al brain.
+    Nota: el brain solo DECIDE la llamada, no la ejecuta. El agente es quien
+    ejecuta realmente la tool y le devuelve el resultado al brain.
     """
 
     name: str
@@ -90,16 +91,16 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class Message:
-    """Un mensaje de la conversacion que el agente le pasa al brain.
+    """Un mensaje de la conversación que el agente le pasa al brain.
 
     role: 'system' (personalidad/instrucciones) | 'user' (el humano) |
     'assistant' (BMO) | 'tool' (resultado de ejecutar una tool).
     El brain es STATELESS: recibe la lista completa de mensajes en cada llamada,
     no guarda memoria. La memoria la lleva el agente.
 
-    - tool_calls: presente cuando el assistant (BMO) pidio ejecutar tools. Es el
+    - tool_calls: presente cuando el assistant (BMO) pidió ejecutar tools. Es el
       turno que Ollama espera ANTES de los resultados 'tool'.
-    - name: en un mensaje 'tool', de que tool viene el resultado.
+    - name: en un mensaje 'tool', de qué tool viene el resultado.
     """
 
     role: str
@@ -110,10 +111,10 @@ class Message:
 
 @dataclass(frozen=True)
 class BrainDecision:
-    """Lo que el brain resolvio tras razonar un paso.
+    """Lo que el brain resolvió tras razonar un paso.
 
     Es una de dos cosas:
-    - `reply`: la respuesta final de BMO (no hacen falta mas tools).
+    - `reply`: la respuesta final de BMO (no hacen falta más tools).
     - `tool_calls`: tools que el agente debe ejecutar antes de volver a pensar.
     """
 
@@ -122,5 +123,5 @@ class BrainDecision:
 
     @property
     def wants_tools(self) -> bool:
-        """True si el brain pidio ejecutar tools (el agente debe seguir el loop)."""
+        """True si el brain pidió ejecutar tools (el agente debe seguir el loop)."""
         return len(self.tool_calls) > 0

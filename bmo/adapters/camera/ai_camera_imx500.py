@@ -1,11 +1,11 @@
 """Adapter de la Raspberry Pi AI Camera (Sony IMX500): inferencia on-sensor.
 
-A diferencia de una camara normal + vision aparte, el IMX500 ACOPLA camara e
+A diferencia de una cámara normal + visión aparte, el IMX500 ACOPLA cámara e
 inferencia: la red neuronal corre DENTRO del sensor y las detecciones salen del
-metadata de su propio pipeline, no de un frame arbitrario. Ademas `IMX500(...)`
+metadata de su propio pipeline, no de un frame arbitrario. Además `IMX500(...)`
 debe crearse ANTES que `Picamera2()`. Por eso es UN solo adapter que cumple los
 dos ports (`CameraSourcePort` + `VisionPort`): el composition root inyecta la
-misma instancia como camara y como vision.
+misma instancia como cámara y como visión.
 """
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ from bmo.ports.vision import VisionPort
 _LOG = logging.getLogger(__name__)
 
 # No todos los frames del IMX500 traen el tensor de inferencia adjunto: en los
-# que no, get_outputs() devuelve None. analyze() reintenta hasta este numero de
-# frames para agarrar uno con deteccion fresca antes de rendirse.
+# que no, get_outputs() devuelve None. analyze() reintenta hasta este número de
+# frames para obtener uno con detección fresca antes de detenerse.
 MAX_METADATA_TRIES = 15
 
 
@@ -34,13 +34,13 @@ def build_perception(
     threshold: float,
     to_box: Callable[[Any], BoundingBox],
 ) -> Perception:
-    """Convierte los tensores de salida del IMX500 en una Perception (logica pura).
+    """Convierte los tensores de salida del IMX500 en una Perception (lógica pura).
 
-    - `boxes`, `scores`, `classes`: iterables alineados (una entrada por deteccion).
+    - `boxes`, `scores`, `classes`: iterables alineados (una entrada por detección).
     - `labels`: nombres de clase indexados por el id que devuelve la red.
     - `threshold`: se descartan las detecciones con score <= threshold.
     - `to_box`: convierte las coords crudas del tensor a un BoundingBox ya escalado
-      al espacio de la imagen (en produccion usa `convert_inference_coords`).
+      al espacio de la imagen (en producción usa `convert_inference_coords`).
     """
     detections: List[Detection] = []
     for coords, score, cls in zip(boxes, scores, classes):
@@ -58,9 +58,9 @@ def prepare_boxes(
     bbox_order: str,
     input_h: int,
 ) -> Any:
-    """Normaliza y reordena las cajas crudas segun los intrinsics del modelo.
+    """Normaliza y reordena las cajas crudas según los intrinsics del modelo.
 
-    - `bbox_normalization`: si el modelo entrega coords en pixeles del tensor de
+    - `bbox_normalization`: si el modelo entrega coords en píxeles del tensor de
       entrada, se dividen por `input_h` para llevarlas a [0, 1].
     - `bbox_order`: 'yx' -> (y0, x0, y1, x1) (lo que espera convert_inference_coords);
       'xy' -> (x0, y0, x1, y1), que hay que reordenar a 'yx'.
@@ -73,7 +73,7 @@ def prepare_boxes(
 
 
 class AiCameraImx500(CameraSourcePort, VisionPort):
-    """Camara + vision on-sensor en un solo dispositivo (Sony IMX500)."""
+    """Cámara + visión on-sensor en un solo dispositivo (Sony IMX500)."""
 
     def __init__(
         self,
@@ -107,7 +107,7 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
             from picamera2 import Picamera2
             from picamera2.devices import IMX500
 
-            # OJO: el IMX500 debe existir ANTES de instanciar Picamera2.
+            # IMPORTANTE: el IMX500 debe existir ANTES de instanciar Picamera2.
             self._imx500 = IMX500(self._rpk_path)
             intrinsics = self._imx500.network_intrinsics
             self._intrinsics = intrinsics
@@ -121,7 +121,7 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
                 )
             )
             self._picam2.start()
-        except Exception:  # noqa: BLE001 - sin AI Camera, BMO sigue vivo pero ciego
+        except Exception:  # noqa: BLE001 - sin AI Camera, BMO sigue funcionando sin visión
             self._picam2 = None
             self._imx500 = None
             self._intrinsics = None
@@ -142,12 +142,12 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
             return Perception()
 
         # No todos los frames traen el tensor de inferencia; reintentamos unos
-        # cuantos hasta agarrar uno con datos (si no, "veo: nada" todo el tiempo).
+        # cuantos hasta obtener uno con datos (si no, "veo: nada" todo el tiempo).
         np_outputs = None
         metadata = None
         for _ in range(MAX_METADATA_TRIES):
             metadata = self._picam2.capture_metadata()
-            # add_batch=True: los tensores vienen como (1, N, ...); [0] saca el batch.
+            # add_batch=True: los tensores vienen como (1, N, ...); [0] extrae el batch.
             np_outputs = self._imx500.get_outputs(metadata, add_batch=True)
             if np_outputs is not None:
                 break

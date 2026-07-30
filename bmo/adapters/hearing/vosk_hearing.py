@@ -1,12 +1,12 @@
-"""Adapter de oido con Vosk: microfono -> texto, offline y liviano.
+"""Adapter de oído con Vosk: micrófono -> texto, offline y liviano.
 
-Vosk es un STT offline que corre bien en la Pi (modelo small ~40MB). Un solo
+Vosk es un STT offline que funciona bien en la Pi (modelo small ~40MB). Un solo
 motor sirve para DETECTAR 'hello' y para transcribir el comando: el audio se
-captura con `arecord` (ya probado con el combo USB) y se transcribe en
+captura con `arecord` (ya probado con el conjunto USB) y se transcribe en
 streaming hasta que Vosk detecta el fin de la frase (silencio).
 
 Igual que PiperVoice, tiene una costura inyectable (`session`) para poder
-testear la logica sin tener vosk ni microfono: los tests pasan una sesion
+testear la lógica sin tener vosk ni micrófono: los tests pasan una sesión
 falsa; en la Pi se arma la real (import lazy de vosk).
 """
 
@@ -23,7 +23,7 @@ from bmo.ports.hearing import HearingPort
 
 _LOG = logging.getLogger(__name__)
 
-# Una sesion de escucha: cada llamada bloquea y devuelve UNA frase transcripta.
+# Una sesión de escucha: cada llamada bloquea y devuelve UNA frase transcrita.
 # Encapsula el modelo Vosk + el stream de arecord, ya inicializados una vez.
 Session = Callable[[], str]
 
@@ -32,7 +32,7 @@ _BYTES_PER_SAMPLE = 2  # S16_LE = 16 bits = 2 bytes por muestra (mono)
 
 
 def _arecord_command(device: str, sample_rate: int) -> List[str]:
-    """Comando arecord para capturar PCM crudo (raw) del microfono."""
+    """Comando arecord para capturar PCM crudo (raw) del micrófono."""
     cmd = ["arecord", "-q"]
     if device:
         cmd += ["-D", device]
@@ -41,11 +41,7 @@ def _arecord_command(device: str, sample_rate: int) -> List[str]:
 
 
 def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Session:
-    """Carga el modelo Vosk y abre el microfono UNA vez; devuelve la sesion.
-
-    El modelo se carga una sola vez (es caro): la sesion resultante se reutiliza
-    en cada `listen()` para transcribir una frase mas. Import lazy de vosk: solo
-    hace falta en la Pi, no en Windows ni en los tests.
+    """Carga el modelo Vosk y abre el micrófono UNA vez; devuelve la sesión.
     """
     from vosk import KaldiRecognizer, Model  # lazy: solo en la Pi
 
@@ -71,7 +67,7 @@ def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Sessi
 
 
 class VoskHearing(HearingPort):
-    """Oido de BMO: transcribe el microfono con Vosk (offline)."""
+    """Oído de BMO: transcribe el micrófono con Vosk (offline)."""
 
     def __init__(
         self,
@@ -96,24 +92,24 @@ class VoskHearing(HearingPort):
     def listen(self) -> str:
         try:
             return self._ensure_session()()
-        except Exception:  # noqa: BLE001 - un fallo de audio no debe tumbar a BMO
-            _LOG.warning("no pude escuchar (vosk/arecord)", exc_info=True)
+        except Exception:  # noqa: BLE001 - un fallo de audio no debe interrumpir a BMO
+            _LOG.warning("no se pudo escuchar (vosk/arecord)", exc_info=True)
             return ""
 
     @property
     def available(self) -> bool:
         """True si BMO puede escuchar: el modelo Vosk debe existir en disco.
 
-        Con una sesion inyectada (tests) se asume disponible. Si el modelo no
-        esta descargado, devuelve False para que el arranque caiga a teclado en
-        vez de entrar en un bucle de fallos.
+        Con una sesión inyectada (tests) se asume disponible. Si el modelo no
+        está descargado, devuelve False para que el arranque recurra al teclado
+        en vez de entrar en un bucle de fallos.
         """
         if self._session is not None:
             return True
         return os.path.isdir(self._model_path)
 
     def _ensure_session(self) -> Session:
-        """Arma la sesion Vosk la primera vez y la reutiliza despues."""
+        """Arma la sesión Vosk la primera vez y la reutiliza después."""
         if self._session is None:
             self._session = _build_vosk_session(
                 self._model_path, self._device, self._sample_rate

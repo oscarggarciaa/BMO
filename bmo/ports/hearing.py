@@ -1,8 +1,8 @@
-"""Port del oido: la entrada de voz de BMO.
+"""Port del oído: la entrada de voz de BMO.
 
-Es el simetrico del VoicePort. Asi como `VoicePort.speak(text)` SACA voz,
-`HearingPort.listen()` METE voz transcribida a texto. El adapter solo hace
-audio -> texto; decidir si ese texto despierta a BMO es cosa del dominio.
+Es el simétrico del VoicePort. Así como `VoicePort.speak(text)` EMITE voz,
+`HearingPort.listen()` RECIBE voz transcrita a texto. El adapter solo hace
+audio -> texto; decidir si ese texto activa a BMO corresponde al dominio.
 """
 
 from __future__ import annotations
@@ -15,9 +15,9 @@ class HearingPort(ABC):
 
     @abstractmethod
     def listen(self) -> str:
-        """Bloquea hasta captar una frase y la devuelve transcripta.
+        """Bloquea hasta captar una frase y la devuelve transcrita.
 
-        Devuelve "" si no se entendio nada (silencio, ruido, error de audio).
+        Devuelve "" si no se entendió nada (silencio, ruido, error de audio).
         """
 
     @property
@@ -27,10 +27,10 @@ class HearingPort(ABC):
 
 
 class NullHearing(HearingPort):
-    """Oido que no escucha nada.
+    """Oído que no escucha nada.
 
-    Patron Null Object: cuando no hay microfono (tests, BMO sordo), el codigo
-    igual puede llamar a `hearing.listen()` sin preguntar `if hearing is None`.
+    Patrón Null Object: cuando no hay micrófono (tests, BMO sin micrófono), el
+    código igual puede llamar a `hearing.listen()` sin preguntar `if hearing is None`.
     `available` es False para que el arranque NO inicie el bucle de escucha.
     """
 

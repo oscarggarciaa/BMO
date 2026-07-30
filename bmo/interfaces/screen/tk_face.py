@@ -1,14 +1,14 @@
-"""Adapter de la cara: pinta a BMO directo en la pantalla fisica con tkinter.
+"""Adapter de la cara: pinta a BMO directo en la pantalla física con tkinter.
 
 Diseño de hilos (clave):
 - tkinter EXIGE que la ventana y su mainloop vivan en el hilo principal.
 - El REPL/Agent corre en un hilo aparte y solo llama a `show(...)`, que se
-  limita a guardar la expresion deseada bajo un lock. NO toca tkinter.
-- Un tick periodico (`root.after`) lee esa expresion en el hilo principal y
-  actualiza la imagen. Asi respetamos que tkinter no es thread-safe.
+  limita a guardar la expresión deseada bajo un lock. NO toca tkinter.
+- Un tick periódico (`root.after`) lee esa expresión en el hilo principal y
+  actualiza la imagen. Así respetamos que tkinter no es thread-safe.
 
-Los frames son PNGs en `faces/<expresion>/NN.png`. Varias imagenes en una
-carpeta = animacion; una sola = cara fija.
+Los frames son PNGs en `faces/<expresion>/NN.png`. Varias imágenes en una
+carpeta = animación; una sola = cara fija.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import threading
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from bmo.domain.models import Expression
 from bmo.ports.face import FacePort
@@ -46,6 +46,7 @@ class TkFace(FacePort):
         self._root = None
         self._label = None
         self._photos: Dict[Expression, List[object]] = {}
+        self._on_touch: Optional[Callable[[], None]] = None
 
     @property
     def available(self) -> bool:
@@ -54,7 +55,7 @@ class TkFace(FacePort):
 
     @property
     def current(self) -> Expression:
-        """Expresion que se quiere mostrar ahora (thread-safe)."""
+        """Expresión que se quiere mostrar ahora (thread-safe)."""
         with self._lock:
             return self._current
 
@@ -62,8 +63,23 @@ class TkFace(FacePort):
         with self._lock:
             self._current = expression
 
+    def set_on_touch(self, callback: Optional[Callable[[], None]]) -> None:
+        """Registra la reacción a ejecutar cuando toquen la pantalla."""
+        self._on_touch = callback
+
+    def _handle_touch(self, _event: object = None) -> None:
+        """Dispara la reacción al toque en un hilo aparte.
+
+        La reacción puede hablar (bloqueante) y esperar; corriéndola fuera del
+        hilo de tkinter, el mainloop y la animación NO se congelan.
+        """
+        callback = self._on_touch
+        if callback is None:
+            return
+        threading.Thread(target=callback, name="bmo-touch", daemon=True).start()
+
     def _frames_for(self, expression: Expression) -> List[Path]:
-        """Lista los frames de una expresion, ordenados por nombre."""
+        """Lista los frames de una expresión, ordenados por nombre."""
         folder = self._faces_dir / expression.value
         if not folder.is_dir():
             return []
@@ -82,6 +98,7 @@ class TkFace(FacePort):
             self._root.configure(bg="black")
             self._root.protocol("WM_DELETE_WINDOW", self.stop)
             self._root.bind("<Escape>", lambda _event: self.stop())
+            self._root.bind("<Button-1>", self._handle_touch)
             if self._fullscreen:
                 self._root.attributes("-fullscreen", True)
             self._root.config(cursor="none")
@@ -94,7 +111,7 @@ class TkFace(FacePort):
             self._preload()
             self._tick()
             self._available = True
-        except Exception:  # noqa: BLE001 - sin display, BMO cae a modo consola
+        except Exception:  # noqa: BLE001 - sin display, BMO recurre al modo consola
             self._available = False
             self._root = None
             _LOG.warning(
@@ -127,8 +144,8 @@ class TkFace(FacePort):
             for path in self._frames_for(expression):
                 try:
                     img = Image.open(path).convert("RGB")
-                except Exception:  # noqa: BLE001 - un frame roto no tumba la cara
-                    _LOG.warning("no pude cargar el frame %s", path)
+                except Exception:  # noqa: BLE001 - un frame roto no interrumpe la cara
+                    _LOG.warning("no se pudo cargar el frame %s", path)
                     continue
                 scale = min(screen_w / img.width, screen_h / img.height)
                 size = (max(1, int(img.width * scale)), max(1, int(img.height * scale)))
@@ -139,14 +156,14 @@ class TkFace(FacePort):
 
         if not self._photos:
             _LOG.warning(
-                "no encontre ningun frame en %s; la cara va a salir negra. "
+                "no se encontró ningún frame en %s; la cara saldrá negra. "
                 "Verifica que las carpetas de expresiones (neutral, happy, ...) "
-                "esten sincronizadas en la Pi",
+                "estén sincronizadas en la Pi",
                 self._faces_dir,
             )
 
     def _tick(self) -> None:
-        """Avanza la animacion. Se re-agenda a si mismo con `after`."""
+        """Avanza la animación. Se re-agenda a sí mismo con `after`."""
         if self._root is None:
             return
 

@@ -42,6 +42,14 @@ class BrainConfig:
 
 
 @dataclass(frozen=True)
+class VoiceConfig:
+    adapter: str = "none"  # none (muda) | piper (TTS neuronal offline)
+    model_path: str = "models/en_US-lessac-medium.onnx"
+    device: str = ""  # aplay -D (p. ej. plughw:1,0 para la placa USB); vacio = default
+    sample_rate: int = 22050
+
+
+@dataclass(frozen=True)
 class ScreenConfig:
     enabled: bool = True
     fullscreen: bool = True
@@ -53,6 +61,7 @@ class Config:
     camera: CameraConfig
     vision: VisionConfig
     brain: BrainConfig
+    voice: VoiceConfig
     screen: ScreenConfig
 
     @classmethod
@@ -62,6 +71,7 @@ class Config:
             camera=CameraConfig(**data.get("camera", {})),
             vision=VisionConfig(**data.get("vision", {})),
             brain=BrainConfig(**data.get("brain", {})),
+            voice=VoiceConfig(**data.get("voice", {})),
             screen=ScreenConfig(**data.get("screen", {})),
         )
 

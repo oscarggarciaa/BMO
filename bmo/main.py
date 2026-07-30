@@ -12,6 +12,7 @@ from bmo.domain.models import Expression
 from bmo.ports.camera import CameraSourcePort
 from bmo.ports.face import FacePort
 from bmo.ports.vision import VisionPort
+from bmo.ports.voice import VoicePort
 from bmo.tools.look import build_look_tool
 from bmo.tools.tool import ToolRegistry
 
@@ -105,11 +106,25 @@ def build_face(config: Config) -> Optional[FacePort]:
     return TkFace(fullscreen=config.screen.fullscreen, fps=config.screen.fps)
 
 
+def build_voice(config: Config) -> Optional[VoicePort]:
+    """Factory de la voz: arma Piper si esta habilitada (import lazy).
+
+    Si `voice.adapter` es 'none', devuelve None y el Agent usa un NullVoice
+    (BMO responde por consola/pantalla pero no habla).
+    """
+    if config.voice.adapter == "piper":
+        from bmo.adapters.voice.piper_voice import PiperVoice
+
+        return PiperVoice.from_config(config.voice)
+    return None
+
+
 def build_agent(
     brain,
     camera: CameraSourcePort,
     vision: VisionPort,
     face: Optional[FacePort] = None,
+    voice: Optional[VoicePort] = None,
 ) -> Agent:
     """Ensambla el Agente: registra las tools y le inyecta el cerebro.
 
@@ -122,6 +137,7 @@ def build_agent(
         tools=registry,
         system_prompt=BMO_SYSTEM_PROMPT,
         face=face,
+        voice=voice,
     )
 
 
@@ -188,7 +204,8 @@ def main() -> None:
     camera, vision = build_devices(config)
     brain = build_brain(config)
     face = build_face(config)
-    agent = build_agent(brain, camera, vision, face)
+    voice = build_voice(config)
+    agent = build_agent(brain, camera, vision, face, voice)
 
     camera.start()
     if face is not None:

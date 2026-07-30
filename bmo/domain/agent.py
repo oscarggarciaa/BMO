@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from bmo.domain.models import Expression, Message, ToolCall, Utterance
 from bmo.ports.face import FacePort, NullFace
+from bmo.ports.voice import NullVoice, VoicePort
 from bmo.tools.tool import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -22,11 +23,13 @@ class Agent:
         system_prompt: str = "",
         max_steps: int = 5,
         face: Optional[FacePort] = None,
+        voice: Optional[VoicePort] = None,
     ) -> None:
         self._brain = brain
         self._tools = tools
         self._max_steps = max_steps
         self._face = face or NullFace()
+        self._voice = voice or NullVoice()
         self._history: List[Message] = []
         if system_prompt:
             self._history.append(Message(role="system", content=system_prompt))
@@ -53,7 +56,10 @@ class Agent:
             if not decision.wants_tools:
                 reply = decision.reply or Utterance(text="", speaker="bmo")
                 logger.info("BMO decidio responder: %s", reply.text)
-                self._face.show(Expression.TALKING)
+                self._voice.speak(
+                    reply.text,
+                    on_audio_start=lambda: self._face.show(Expression.TALKING),
+                )
                 self._history.append(Message(role="assistant", content=reply.text))
                 return reply
 
@@ -79,7 +85,10 @@ class Agent:
                 )
                 if self._tool_is_direct(call.name):
                     logger.info("tool '%s' es directa: su resultado es la respuesta", call.name)
-                    self._face.show(Expression.TALKING)
+                    self._voice.speak(
+                        result,
+                        on_audio_start=lambda: self._face.show(Expression.TALKING),
+                    )
                     return Utterance(text=result, speaker="bmo")
 
         logger.warning(

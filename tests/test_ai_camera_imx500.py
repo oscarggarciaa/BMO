@@ -19,7 +19,14 @@ from bmo.adapters.camera.ai_camera_imx500 import (
     build_perception,
     prepare_boxes,
 )
-from bmo.config import BrainConfig, CameraConfig, Config, ScreenConfig, VisionConfig
+from bmo.config import (
+    BrainConfig,
+    CameraConfig,
+    Config,
+    ScreenConfig,
+    VisionConfig,
+    VoiceConfig,
+)
 from bmo.domain.models import BoundingBox, Detection
 from bmo.ports.camera import CameraSourcePort
 from bmo.ports.vision import VisionPort
@@ -248,6 +255,7 @@ def _imx500_config() -> Config:
         camera=CameraConfig(adapter="ai_camera_imx500"),
         vision=VisionConfig(adapter="ai_camera_imx500", rpk_path="x.rpk"),
         brain=BrainConfig(),
+        voice=VoiceConfig(),
         screen=ScreenConfig(enabled=False),
     )
 

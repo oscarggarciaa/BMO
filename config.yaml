@@ -24,8 +24,14 @@ vision:
 
 brain:
   adapter: ollama             # futuro: hailo | cloud
-  model: llama3.2:3b          # 3B: mejor tool-calling y menos invencion que gemma3:1b (mas lento)
+  model: llama3.2:3b          # 3B: mejor tool-calling y menos invhow areencion que gemma3:1b (mas lento)
   host: http://localhost:11434
+
+voice:                        # BMO habla por los altavoces (TTS)
+  adapter: piper              # none (muda) | piper (TTS neuronal offline)
+  model_path: models/bmo.onnx  # voz BMO fine-tuneada (release v1.0-voice de be-more-agent, base en_US-amy-medium)
+  device: "plughw:2,0"    
+  sample_rate: 22050         # coincide con el sample_rate del modelo bmo.onnx (22050 Hz)
 
 screen:                       # cara de BMO directo en la pantalla fisica (tkinter)
   enabled: true

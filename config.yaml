@@ -22,10 +22,18 @@ vision:
   models_path: /home/oscar/Desktop/bmo/models
   min_face_size: 80
 
+#brain:
+  # hailo -> NPU Hailo-10H via hailo-ollama (puerto 8000). ollama -> CPU (puerto 11434).
+  #adapter: hailo
+  #model: qwen2.5-instruct:1.5b
+  #host: http://localhost:8000
+
+
 brain:
-  adapter: ollama             # futuro: hailo | cloud
-  model: llama3.2:3b          # 3B: mejor tool-calling y menos invhow areencion que gemma3:1b (mas lento)
-  host: http://localhost:11434
+  # hailo -> NPU Hailo-10H via hailo-ollama (puerto 8000). ollama -> CPU (puerto 11434).
+  adapter: hailo
+  model: qwen3:1.7b3 1.7B
+  host: http://localhost:8000
 
 voice:                        # BMO habla por los altavoces (TTS)
   adapter: piper              # none (muda) | piper (TTS neuronal offline)

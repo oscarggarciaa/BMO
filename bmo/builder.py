@@ -69,12 +69,17 @@ def build_devices(config: Config) -> tuple[CameraSourcePort, VisionPort]:
 def build_brain(config: Config) -> "OllamaBrain":
     """Factory del cerebro: elige el adapter según config (import lazy).
 
-    Cuando se integre Hailo, se agrega un `elif == 'hailo'` con su adapter.
+    - `ollama`: LLM en CPU vía Ollama (host por defecto :11434).
+    - `hailo`: LLM en el NPU Hailo-10H del AI HAT+ 2 vía hailo-ollama (:8000).
     """
     if config.brain.adapter == "ollama":
         from bmo.adapters.brain.ollama_brain import OllamaBrain
 
         return OllamaBrain.from_config(config.brain)
+    if config.brain.adapter == "hailo":
+        from bmo.adapters.brain.hailo_brain import HailoBrain
+
+        return HailoBrain.from_config(config.brain)
     raise ValueError(f"Adapter de cerebro desconocido: {config.brain.adapter}")
 
 

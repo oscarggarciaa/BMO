@@ -67,7 +67,16 @@ class OllamaBrain:
         action = self._extract_action(text, {t.name for t in tools})
         if action is not None:
             return BrainDecision(tool_calls=(ToolCall(name=action),))
-        return BrainDecision(reply=Utterance(text=self._clean_reply(text), speaker="bmo"))
+        reply = self._clean_reply(self._sanitize_content(text))
+        return BrainDecision(reply=Utterance(text=reply, speaker="bmo"))
+
+    def _sanitize_content(self, text: str) -> str:
+        """Hook para post-procesar el content crudo del modelo.
+
+        En OllamaBrain no hace nada (Ollama ya filtra los tokens de plantilla).
+        HailoBrain lo sobrescribe: el servidor hailo-ollama NO los filtra.
+        """
+        return text
 
     @staticmethod
     def _build_action_protocol(tools: List[Tool]) -> str:
@@ -91,9 +100,24 @@ class OllamaBrain:
             "2. There is an action below that does EXACTLY what is asked.",
             "3. You are SURE. If you doubt even a little, pick CHAT MODE.",
             "",
+            "## VISION vs IDENTITY (read this carefully)",
+            "Do NOT confuse these two:",
+            "- Questions about WHAT YOU SEE, the real world in front of you, or "
+            "the camera (for example 'what do you see', 'what are you looking "
+            "at', 'can you see me', 'what is in front of you') -> ACTION MODE.",
+            "- Questions about WHO YOU ARE, how you feel or your opinions (for "
+            "example 'who are you', 'how are you', 'what can you do') -> CHAT "
+            "MODE.",
+            "",
+            "These VISION VERBS all mean the same thing and ALL trigger ACTION "
+            "MODE: looking, watching, seeing, staring, gazing, observing. If the "
+            "user asks what you are looking/watching/staring at, or what you can "
+            "see, ALWAYS use ACTION.",
+            "",
             "GOLDEN RULE: when in doubt, CHAT. Greetings, questions about you, "
             "opinions, jokes and anything you can answer from memory ALWAYS go "
-            "in CHAT MODE, NEVER with an action.",
+            "in CHAT MODE, NEVER with an action. The ONLY exception is looking at "
+            "the real world: if the user asks what you see, ALWAYS use ACTION.",
             "",
             "## Exact format of an action",
             "To run an action reply ONLY with this JSON, on a single line and "
@@ -124,6 +148,11 @@ class OllamaBrain:
             "play!",
             "These go in ACTION MODE (only the JSON, nothing else):",
             f'  User: what do you see? -> {{"action": "{first}"}}',
+            f'  User: what are you looking at? -> {{"action": "{first}"}}',
+            f'  User: what are you watching? -> {{"action": "{first}"}}',
+            f'  User: what are you staring at? -> {{"action": "{first}"}}',
+            f'  User: can you see me? -> {{"action": "{first}"}}',
+            f'  User: what is in front of you? -> {{"action": "{first}"}}',
             f'  User: look and tell me what is in front -> {{"action": "{first}"}}',
             f'  User: take a picture -> {{"action": "{first}"}}',
         ]

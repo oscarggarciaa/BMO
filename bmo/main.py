@@ -46,8 +46,7 @@ def run(config: Config) -> None:
     camera, vision = build_devices(config)
     brain = build_brain(config)
     face = build_face(config)
-    # una sola tarjeta de sonido: serializamos la voz para que la conversacion y
-    # el tactil nunca lancen dos audios a la vez (misma instancia para ambos)
+    # una sola tarjeta de sonido para diferentes features no usen el mismo driver a la vez
     voice = SerializedVoice(build_voice(config) or NullVoice())
     hearing = build_hearing(config)
     agent = build_agent(brain, camera, vision, face, voice)
@@ -104,6 +103,8 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     # carga la config del fichero con todos los parámetros
     config = Config.load("config.yaml")
     run(config)

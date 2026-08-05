@@ -51,14 +51,16 @@ def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Sessi
         _arecord_command(device, sample_rate),
         stdout=subprocess.PIPE,
     )
-
+    # modulo principal para escucha
     def listen_one() -> str:
         if mic.stdout is None:
             return ""
         while True:
+            # lee un bloque de audio
             data = mic.stdout.read(_FRAMES_PER_READ * _BYTES_PER_SAMPLE)
             if not data:
                 return ""
+            # devuelve texto transcrito en fin de frase
             if recognizer.AcceptWaveform(data):
                 result = json.loads(recognizer.Result())
                 return str(result.get("text", "")).strip()

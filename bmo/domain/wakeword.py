@@ -22,11 +22,6 @@ class WakeWord:
 
     def detect(self, transcript: str) -> Optional[str]:
         """Devuelve el comando si `transcript` empieza con la palabra de activación.
-
-        - "hello what do you see" -> "what do you see" (el comando)
-        - "hello"                 -> "" (se activó, sin comando: saludará)
-        - "what do you see"       -> None (sin wake-word: BMO sigue inactivo)
-
         La comparación es case-insensitive y por palabra completa: "hello" en
         el medio de la frase NO activa a BMO.
         """

@@ -32,7 +32,7 @@ vision:
 brain:
   # hailo -> NPU Hailo-10H via hailo-ollama (puerto 8000). ollama -> CPU (puerto 11434).
   adapter: hailo
-  model: qwen3:1.7b3 1.7B
+  model: qwen3:1.7b
   host: http://localhost:8000
 
 voice:                        # BMO habla por los altavoces (TTS)

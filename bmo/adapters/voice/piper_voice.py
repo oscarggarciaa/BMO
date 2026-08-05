@@ -59,10 +59,14 @@ def _run_pipeline(
     cara se sincroniza con la voz (no habla en silencio mientras piper carga).
     """
     # 1. Sintetizar: aquí vive la latencia (carga del modelo + inferencia).
+    #    stderr -> DEVNULL: piper carga onnxruntime, que escupe warnings de
+    #    descubrimiento de GPU ("Failed to detect devices under /sys/class/drm")
+    #    irrelevantes en la Pi. Se silencian para no ensuciar la consola.
     piper = subprocess.Popen(
         _piper_command(model_path),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     )
     audio, _ = piper.communicate(text.encode("utf-8"))
 

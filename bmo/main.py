@@ -30,12 +30,15 @@ def warm_up_then_serve(
     brain,
     serve: Callable[[], None],
     on_warmup_start: Optional[Callable[[], None]] = None,
+    voice=None,
 ) -> None:
     """Calienta el cerebro y después arranca la atención al usuario.
     """
     if on_warmup_start is not None:
         on_warmup_start()
     brain.warm_up()
+    if voice is not None:
+        voice.speak("BMO is ready to talk!")
     serve()
 
 
@@ -71,6 +74,7 @@ def run(config: Config) -> None:
                 brain,
                 serve=serve,
                 on_warmup_start=lambda: face.show(Expression.WARMUP),
+                voice=voice
             )
         # conversación en thread secundario
         boot_thread = threading.Thread(target=boot, name="bmo-boot", daemon=True)

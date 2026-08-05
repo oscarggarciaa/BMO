@@ -71,3 +71,29 @@ def test_protocol_includes_vision_verb_synonyms() -> None:
     assert "watching" in lowered
     assert "staring" in lowered
     assert "observing" in lowered
+
+
+def test_protocol_routes_knowledge_questions_to_chat_mode() -> None:
+    # Bug real: "what you know about the united states" (CONOCIMIENTO) disparaba
+    # o reutilizaba la accion de look. El prompt debe dar un ejemplo explicito
+    # de pregunta de conocimiento resuelta en CHAT MODE.
+    lowered = _protocol().lower()
+
+    assert "what do you know" in lowered
+
+
+def test_protocol_forbids_reusing_a_previous_vision_result() -> None:
+    # Bug real: tras un look, BMO repetia "I see a person and a laptop" para la
+    # siguiente pregunta no relacionada. El prompt debe declarar que un
+    # resultado de vision es puntual y NO se reutiliza en preguntas nuevas.
+    lowered = _protocol().lower()
+
+    assert "one-time" in lowered
+
+
+def test_protocol_tells_bmo_to_answer_knowledge_not_deflect() -> None:
+    # Decision de diseno: BMO es mini-asistente. Ante conocimiento debe INTENTAR
+    # responder desde el modelo, no esquivar con "solo soy un robot".
+    lowered = _protocol().lower()
+
+    assert "try to answer" in lowered

@@ -59,7 +59,7 @@ class OllamaBrain:
             options={
                 "temperature": 0.2,
                 "top_p": 0.9,
-                "repeat_penalty": 1.1,
+                "repeat_penalty": 1.3,
             },
         )
 
@@ -129,6 +129,18 @@ class OllamaBrain:
             "When you receive a message starting with [result of ...], that is "
             "the result of your action. Use it to answer the user in CHAT MODE "
             "(normal text). Do NOT ask for the same action again.",
+            "A vision result is a ONE-TIME snapshot: it answers ONLY the "
+            "question that triggered the look. For any NEW or different "
+            "question, do NOT repeat a previous vision result; answer the new "
+            "question on its own.",
+            "",
+            "## KNOWLEDGE questions",
+            "Questions about facts, places, history or general knowledge (for "
+            "example 'what do you know about the united states', 'tell me about "
+            "dogs') are CHAT MODE. Try to answer them briefly from your own "
+            "knowledge in one or two cheerful sentences. Only say you are not "
+            "sure if you truly do not know. NEVER use an action for these and "
+            "NEVER answer them with what you saw.",
             "",
             "## Available actions",
         ]
@@ -146,6 +158,8 @@ class OllamaBrain:
             "To surf the web!",
             "  User: what day is it today? -> Oh, I don't know that, but we can "
             "play!",
+            "  User: what do you know about the united states? -> It's a big "
+            "country in North America with lots of cities and people!",
             "These go in ACTION MODE (only the JSON, nothing else):",
             f'  User: what do you see? -> {{"action": "{first}"}}',
             f'  User: what are you looking at? -> {{"action": "{first}"}}',

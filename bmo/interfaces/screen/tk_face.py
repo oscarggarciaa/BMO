@@ -26,6 +26,13 @@ _IMG_EXT = {".png", ".gif", ".jpg", ".jpeg"}
 _DEFAULT_FACES_DIR = Path(__file__).parent / "faces"
 _PREVIEW_LEN = 240
 
+# Colores tomados de la cara real de BMO (muestreados de faces/neutral/01.png).
+_BMO_BG = "#bdffcb"       # verde menta del fondo de la cara
+_BMO_DARK = "#2f5a41"     # verde oscuro de ojos/boca: texto y acentos
+_CARD_BG = "#ffffff"      # tarjeta de cada nota
+_CARD_LINE = "#8fe0a3"    # borde suave de la tarjeta
+_DANGER = "#c0533f"       # rojo apagado para el borrar
+
 
 class TkFace(FacePort):
     """Cara de BMO renderizada en pantalla completa con tkinter."""
@@ -48,6 +55,7 @@ class TkFace(FacePort):
         self._label = None
         self._photos: Dict[Expression, List[object]] = {}
         self._notes_provider: Optional[Callable[[], List[Note]]] = None
+        self._notes_deleter: Optional[Callable[[Note], None]] = None
         self._menu: Optional[object] = None
 
     @property
@@ -70,6 +78,12 @@ class TkFace(FacePort):
     ) -> None:
         """Registra la fuente de notas a listar cuando toquen la pantalla."""
         self._notes_provider = provider
+
+    def set_notes_deleter(
+        self, deleter: Optional[Callable[[Note], None]]
+    ) -> None:
+        """Registra la acción de borrar una nota desde el menú táctil."""
+        self._notes_deleter = deleter
 
     @property
     def menu_open(self) -> bool:
@@ -200,61 +214,97 @@ class TkFace(FacePort):
         self._root.after(self._delay_ms, self._tick)
 
     def _open_menu(self) -> None:
-        """Dibuja el menú de notas: un panel a pantalla completa con scroll."""
+        """Dibuja el menú de notas: panel a pantalla completa con los colores de BMO."""
+        import tkinter as tk
+
+        menu = tk.Frame(self._root, bg=_BMO_BG)
+        menu.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        header = tk.Frame(menu, bg=_BMO_BG)
+        header.pack(fill="x", padx=22, pady=(18, 6))
+        tk.Button(
+            header, text="✕", command=self._close_menu,
+            bg=_BMO_BG, fg=_BMO_DARK, activebackground=_BMO_BG,
+            activeforeground=_BMO_DARK, relief="flat", borderwidth=0,
+            font=("DejaVu Sans", 22, "bold"), cursor="none",
+        ).pack(side="right")
+
+        self._render_notes(menu)
+        self._menu = menu
+
+    def _render_notes(self, menu: object) -> None:
+        """Rellena el panel con una tarjeta por nota (o un aviso si no hay)."""
         import tkinter as tk
 
         notes = self._notes_to_show()
-        menu = tk.Frame(self._root, bg="black")
-        menu.place(relx=0, rely=0, relwidth=1, relheight=1)
-
-        header = tk.Frame(menu, bg="black")
-        header.pack(fill="x", padx=16, pady=12)
-        tk.Label(
-            header, text="Notes", bg="black", fg="white",
-            font=("DejaVu Sans", 22, "bold"),
-        ).pack(side="left")
-        tk.Button(
-            header, text="✕", command=self._close_menu,
-            bg="#222", fg="white", activebackground="#444", activeforeground="white",
-            relief="flat", font=("DejaVu Sans", 18, "bold"), width=3, borderwidth=0,
-        ).pack(side="right")
-
         if not notes:
             tk.Label(
-                menu, text="No notes yet.", bg="black", fg="#888",
-                font=("DejaVu Sans", 16),
+                menu, text="No notes yet", bg=_BMO_BG, fg=_BMO_DARK,
+                font=("DejaVu Sans", 18),
             ).pack(expand=True)
-        else:
-            self._fill_notes(menu, notes)
+            return
 
-        self._menu = menu
+        # canvas + frame interior = lista desplazable de tarjetas
+        canvas = tk.Canvas(menu, bg=_BMO_BG, highlightthickness=0, bd=0)
+        canvas.pack(side="left", expand=True, fill="both", padx=(22, 22), pady=(0, 22))
+        inner = tk.Frame(canvas, bg=_BMO_BG)
+        window = canvas.create_window((0, 0), window=inner, anchor="nw")
+        inner.bind(
+            "<Configure>",
+            lambda _e: canvas.configure(scrollregion=canvas.bbox("all")),
+        )
+        canvas.bind(
+            "<Configure>", lambda e: canvas.itemconfigure(window, width=e.width)
+        )
+        # scroll por arrastre (la pantalla táctil no tiene rueda)
+        for widget in (canvas, inner):
+            widget.bind("<ButtonPress-1>", lambda e: canvas.scan_mark(e.x, e.y))
+            widget.bind("<B1-Motion>", lambda e: canvas.scan_dragto(e.x, e.y, gain=1))
 
-    def _fill_notes(self, menu: object, notes: List[Note]) -> None:
-        """Rellena el panel con las notas en un texto desplazable (arrastre táctil)."""
+        for note in notes:
+            self._render_card(inner, note)
+
+    def _render_card(self, parent: object, note: Note) -> None:
+        """Una tarjeta: solo la frase de la nota y un botón para borrarla."""
         import tkinter as tk
 
-        body = tk.Frame(menu, bg="black")
-        body.pack(expand=True, fill="both", padx=16, pady=(0, 16))
-
-        scrollbar = tk.Scrollbar(body)
-        scrollbar.pack(side="right", fill="y")
-        text = tk.Text(
-            body, bg="black", fg="white", bd=0, highlightthickness=0,
-            wrap="word", font=("DejaVu Sans", 15), padx=8, pady=8,
-            yscrollcommand=scrollbar.set, cursor="none", spacing3=6,
+        card = tk.Frame(
+            parent, bg=_CARD_BG, highlightbackground=_CARD_LINE,
+            highlightthickness=1, bd=0,
         )
-        text.pack(side="left", expand=True, fill="both")
-        scrollbar.config(command=text.yview)
+        card.pack(fill="x", pady=7)
 
-        text.tag_configure("title", font=("DejaVu Sans", 17, "bold"), foreground="#7fd1ff")
-        for note in notes:
-            text.insert("end", note.title + "\n", "title")
-            text.insert("end", format_note_preview(note) + "\n\n")
-        text.config(state="disabled")
+        delete = tk.Button(
+            card, text="✕", command=lambda n=note: self._delete_note(n),
+            bg=_CARD_BG, fg=_DANGER, activebackground=_CARD_BG,
+            activeforeground=_DANGER, relief="flat", borderwidth=0,
+            font=("DejaVu Sans", 15, "bold"), cursor="none",
+        )
+        delete.pack(side="right", anchor="n", padx=(0, 10), pady=8)
 
-        # scroll por arrastre: en la pantalla táctil no hay rueda de ratón
-        text.bind("<ButtonPress-1>", lambda e: text.scan_mark(e.x, e.y))
-        text.bind("<B1-Motion>", lambda e: text.scan_dragto(e.x, e.y, gain=1))
+        tk.Label(
+            card, text=format_note_preview(note), bg=_CARD_BG, fg=_BMO_DARK,
+            font=("DejaVu Sans", 16), justify="left", anchor="w",
+            wraplength=self._root.winfo_screenwidth() - 140,
+        ).pack(side="left", fill="x", expand=True, padx=(16, 6), pady=12)
+
+    def _delete_note(self, note: Note) -> None:
+        """Borra una nota y refresca el menú para reflejarlo al instante."""
+        deleter = self._notes_deleter
+        if deleter is not None:
+            try:
+                deleter(note)
+            except Exception:  # noqa: BLE001 - un fallo al borrar no rompe la cara
+                _LOG.warning("no se pudo borrar la nota", exc_info=True)
+        if self._root is not None and self._menu is not None:
+            self._refresh_menu()
+
+    def _refresh_menu(self) -> None:
+        """Reconstruye el menú (tras borrar) sin cerrarlo del todo."""
+        if self._menu is None:
+            return
+        self._close_menu()
+        self._open_menu()
 
     def _close_menu(self) -> None:
         """Cierra el menú de notas y vuelve a mostrar la cara."""
@@ -265,7 +315,7 @@ class TkFace(FacePort):
 
 
 def format_note_preview(note: Note, max_len: int = _PREVIEW_LEN) -> str:
-    """Aplana el cuerpo de la nota a una línea recortada para el listado."""
+    """Aplana el contenido de la nota a una frase recortada para la tarjeta."""
     body = " ".join(note.content.split())
     if len(body) <= max_len:
         return body

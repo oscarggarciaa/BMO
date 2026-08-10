@@ -29,6 +29,9 @@ class FakeNotes(NotesPort):
     def all(self) -> List[Note]:
         return []
 
+    def delete(self, note: Note) -> None:
+        self.saved = [c for c in self.saved if c != note.content]
+
 
 class ScriptedBrain:
     """Cerebro con decisiones prefijadas para tests end-to-end."""

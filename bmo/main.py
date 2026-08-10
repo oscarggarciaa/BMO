@@ -60,6 +60,7 @@ def run(config: Config) -> None:
     # tactil: si hay pantalla y notas, tocarla abre el menu de notas guardadas
     if face is not None and notes is not None:
         face.set_notes_provider(notes.all)
+        face.set_notes_deleter(notes.delete)
     # si hay micrófono, guarda el callable con el bucle de escucha
     if hearing is not None and hearing.available:
         wake = WakeWord(config.hearing.wake_word)

@@ -55,6 +55,21 @@ class MarkdownNotes(NotesPort):
         notes.sort(key=lambda n: n.created_at, reverse=True)
         return notes
 
+    def delete(self, note: Note) -> None:
+        if not note.id:
+            return
+        path = Path(note.id)
+        # seguridad: solo se borra dentro de la carpeta de notas (anti traversal)
+        try:
+            path.resolve().relative_to(self._dir.resolve())
+        except ValueError:
+            _LOG.warning("se ignoró un borrado fuera de la carpeta de notas: %s", path)
+            return
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            _LOG.warning("no se pudo borrar la nota %s", path)
+
     def _unique_path(self, note: Note) -> Path:
         """Nombre de fichero legible y único: fecha + slug del título."""
         stamp = note.created_at.strftime("%Y%m%d-%H%M%S")
@@ -126,7 +141,7 @@ def _parse(path: Path) -> Optional[Note]:
         title = _derive_title(content)
     if created is None:
         created = _mtime(path)
-    return Note(title=title, content=content, created_at=created)
+    return Note(title=title, content=content, created_at=created, id=str(path))
 
 
 def _parse_date(value: str) -> Optional[datetime]:

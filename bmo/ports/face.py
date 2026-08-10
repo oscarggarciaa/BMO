@@ -39,6 +39,14 @@ class FacePort(ABC):
         hace nada (caras sin táctil o sin notas).
         """
 
+    def set_notes_deleter(
+        self, deleter: Optional[Callable[[Note], None]]
+    ) -> None:
+        """Registra la acción de borrar una nota desde el menú táctil.
+
+        Por defecto no hace nada (caras sin táctil o sin notas).
+        """
+
 
 class NullFace(FacePort):
     """Cara que no hace nada.

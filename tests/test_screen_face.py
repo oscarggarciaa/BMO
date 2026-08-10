@@ -63,6 +63,25 @@ def test_handle_touch_without_window_is_noop() -> None:
     assert face.menu_open is False
 
 
+def test_delete_note_calls_the_registered_deleter() -> None:
+    face = TkFace(faces_dir=_FACES_DIR)
+    deleted: list = []
+    face.set_notes_deleter(deleted.append)
+    note = Note(title="x", content="bye", created_at=datetime.now())
+
+    face._delete_note(note)
+
+    assert deleted == [note]
+
+
+def test_delete_note_without_deleter_is_noop() -> None:
+    face = TkFace(faces_dir=_FACES_DIR)
+    note = Note(title="x", content="bye", created_at=datetime.now())
+
+    # sin deleter y sin ventana: no debe romper
+    assert face._delete_note(note) is None
+
+
 def test_format_note_preview_flattens_and_truncates() -> None:
     note = Note(
         title="t",

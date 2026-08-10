@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from bmo.adapters.memory.markdown_notes import MarkdownNotes
@@ -93,3 +94,56 @@ def test_two_notes_with_same_title_do_not_overwrite(tmp_path: Path) -> None:
     notes.save("duplicate")
 
     assert len(list(tmp_path.glob("*.md"))) == 2
+
+
+def test_all_populates_note_id_with_the_file_path(tmp_path: Path) -> None:
+    notes = MarkdownNotes(tmp_path)
+    notes.save("with an id")
+
+    note = notes.all()[0]
+
+    assert note.id
+    assert Path(note.id).exists()
+
+
+def test_delete_removes_the_note_file(tmp_path: Path) -> None:
+    notes = MarkdownNotes(tmp_path)
+    notes.save("delete me")
+    note = notes.all()[0]
+
+    notes.delete(note)
+
+    assert notes.all() == []
+    assert not list(tmp_path.glob("*.md"))
+
+
+def test_delete_only_removes_the_targeted_note(tmp_path: Path) -> None:
+    notes = MarkdownNotes(tmp_path)
+    notes.save("keep me")
+    notes.save("drop me")
+    target = next(n for n in notes.all() if n.content == "drop me")
+
+    notes.delete(target)
+
+    remaining = [n.content for n in notes.all()]
+    assert remaining == ["keep me"]
+
+
+def test_delete_without_id_is_a_noop(tmp_path: Path) -> None:
+    notes = MarkdownNotes(tmp_path)
+    notes.save("safe")
+
+    notes.delete(Note(title="x", content="x", created_at=datetime.now()))
+
+    assert len(notes.all()) == 1
+
+
+def test_delete_ignores_paths_outside_the_notes_dir(tmp_path: Path) -> None:
+    outsider = tmp_path / "secret.md"
+    outsider.write_text("do not touch", encoding="utf-8")
+    notes = MarkdownNotes(tmp_path / "vault")
+    notes.save("mine")
+
+    notes.delete(Note(title="x", content="x", created_at=datetime.now(), id=str(outsider)))
+
+    assert outsider.exists()

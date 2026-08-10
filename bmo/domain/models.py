@@ -71,11 +71,14 @@ class Note:
     - title: título corto para listarla en el menú táctil.
     - content: el texto completo de la nota.
     - created_at: momento en que se guardó (ordena el listado, la más nueva arriba).
+    - id: identidad opaca en el almacén (p. ej. la ruta del fichero). La rellena
+      el adapter al leer; permite borrar la nota exacta sin ambigüedad.
     """
 
     title: str
     content: str
     created_at: datetime
+    id: str = ""
 
 
 class Expression(str, Enum):

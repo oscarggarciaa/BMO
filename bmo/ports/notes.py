@@ -23,6 +23,10 @@ class NotesPort(ABC):
     def all(self) -> List[Note]:
         """Devuelve todas las notas, de la más nueva a la más vieja."""
 
+    @abstractmethod
+    def delete(self, note: Note) -> None:
+        """Borra la nota indicada (identificada por su `id`). Idempotente."""
+
 
 class NullNotes(NotesPort):
     """Notas que no persisten nada.
@@ -38,3 +42,6 @@ class NullNotes(NotesPort):
 
     def all(self) -> List[Note]:
         return []
+
+    def delete(self, note: Note) -> None:
+        return None

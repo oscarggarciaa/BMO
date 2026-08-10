@@ -39,3 +39,28 @@ def test_warm_up_swallows_client_errors() -> None:
     brain = OllamaBrain(model="llama3.2:3b", host="x", client=BoomClient())
 
     brain.warm_up()  # no debe lanzar
+
+
+def test_clean_reply_strips_trailing_emoji() -> None:
+    # Un modelo pequeno ignora "never use emojis" en el prompt, asi que el
+    # filtro tiene que vivir en el codigo. El emoji sale y el texto queda limpio.
+    assert OllamaBrain._clean_reply("I see a book! \U0001F4DA") == "I see a book!"
+
+
+def test_clean_reply_strips_inline_emoticon() -> None:
+    assert (
+        OllamaBrain._clean_reply("could you clarify? \U0001F60A")
+        == "could you clarify?"
+    )
+
+
+def test_clean_reply_keeps_plain_text_intact() -> None:
+    assert OllamaBrain._clean_reply("hello there, how are you?") == (
+        "hello there, how are you?"
+    )
+
+
+def test_clean_reply_falls_back_when_only_an_emoji() -> None:
+    # Si el modelo responde SOLO con un emoji, tras filtrarlo no queda nada:
+    # debe caer en el mensaje de respaldo, no devolver cadena vacia.
+    assert OllamaBrain._clean_reply("\U0001F44D") != ""

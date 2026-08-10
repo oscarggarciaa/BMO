@@ -97,3 +97,12 @@ def test_protocol_tells_bmo_to_answer_knowledge_not_deflect() -> None:
     lowered = _protocol().lower()
 
     assert "try to answer" in lowered
+
+
+def test_protocol_forbids_repeating_self_introduction() -> None:
+    # Bug real: el modelo 1.5B anteponia "I'm BMO, your little robot friend!" a
+    # TODO, incluso a respuestas de vision. El prompt debe prohibir presentarse
+    # o repetir la identidad salvo que se lo pregunten.
+    lowered = _protocol().lower()
+
+    assert "only what the user asked" in lowered

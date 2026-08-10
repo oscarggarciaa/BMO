@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from bmo.adapters.hearing.vosk_hearing import VoskHearing
+from bmo.adapters.hearing.vosk_hearing import VoskHearing, _capture_phrase
 from bmo.domain.models import Utterance
 from bmo.domain.wakeword import WakeWord
 from bmo.interfaces.microphone import listen_loop
 from bmo.ports.hearing import HearingPort, NullHearing
+import json
 
 
 class ScriptedHearing(HearingPort):
@@ -135,3 +136,48 @@ def test_vosk_hearing_available_with_injected_session() -> None:
     ear = VoskHearing(model_path="m", session=lambda: "hi")
 
     assert ear.available is True
+
+
+# --- _capture_phrase: leer UNA frase de un stream + recognizer -------------
+
+
+class _FakeRecognizer:
+    """Recognizer Vosk falso: acepta la frase tras N bloques leidos."""
+
+    def __init__(self, accept_on: int, text: str = "hello world") -> None:
+        self._accept_on = accept_on
+        self._text = text
+        self._reads = 0
+
+    def AcceptWaveform(self, data: bytes) -> bool:  # noqa: N802 - API de Vosk
+        self._reads += 1
+        return self._reads >= self._accept_on
+
+    def Result(self) -> str:  # noqa: N802 - API de Vosk
+        return json.dumps({"text": self._text})
+
+
+class _FakeStream:
+    """Stream de audio falso: entrega bloques y luego b'' (fin)."""
+
+    def __init__(self, chunks: List[bytes]) -> None:
+        self._chunks = list(chunks)
+
+    def read(self, _n: int) -> bytes:
+        return self._chunks.pop(0) if self._chunks else b""
+
+
+def test_capture_phrase_returns_text_when_recognizer_accepts() -> None:
+    # Lee bloques hasta que el recognizer detecta fin de frase y transcribe.
+    stream = _FakeStream([b"aaaa", b"bbbb"])
+    recognizer = _FakeRecognizer(accept_on=2)
+
+    assert _capture_phrase(stream, recognizer, chunk_bytes=4) == "hello world"
+
+
+def test_capture_phrase_returns_empty_when_stream_ends() -> None:
+    # Si el stream se corta antes de detectar la frase, devuelve "" sin colgarse.
+    stream = _FakeStream([])
+    recognizer = _FakeRecognizer(accept_on=99)
+
+    assert _capture_phrase(stream, recognizer, chunk_bytes=4) == ""

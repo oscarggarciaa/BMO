@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import subprocess
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 from bmo.config import HearingConfig
 from bmo.ports.hearing import HearingPort
@@ -41,31 +41,54 @@ def _arecord_command(device: str, sample_rate: int) -> List[str]:
 
 
 def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Session:
-    """Carga el modelo Vosk y abre el micrófono UNA vez; devuelve la sesión.
+    """Carga el modelo Vosk UNA vez; captura audio FRESCO en cada escucha.
+
+    El microfono (arecord) NO se deja corriendo de fondo: se abre al empezar a
+    escuchar y se cierra al terminar la frase. Asi, mientras BMO piensa o habla,
+    no hay stream acumulando audio rancio ni su propia voz (lo que antes
+    provocaba overruns y transcripciones basura).
     """
     from vosk import KaldiRecognizer, Model  # lazy: solo en la Pi
 
     model = Model(model_path)
-    recognizer = KaldiRecognizer(model, sample_rate)
-    mic = subprocess.Popen(
-        _arecord_command(device, sample_rate),
-        stdout=subprocess.PIPE,
-    )
-    # modulo principal para escucha
+
     def listen_one() -> str:
-        if mic.stdout is None:
-            return ""
-        while True:
-            # lee un bloque de audio
-            data = mic.stdout.read(_FRAMES_PER_READ * _BYTES_PER_SAMPLE)
-            if not data:
+        # recognizer nuevo por turno: estado de decodificacion limpio.
+        recognizer = KaldiRecognizer(model, sample_rate)
+        mic = subprocess.Popen(
+            _arecord_command(device, sample_rate),
+            stdout=subprocess.PIPE,
+        )
+        try:
+            if mic.stdout is None:
                 return ""
-            # devuelve texto transcrito en fin de frase
-            if recognizer.AcceptWaveform(data):
-                result = json.loads(recognizer.Result())
-                return str(result.get("text", "")).strip()
+            return _capture_phrase(
+                mic.stdout, recognizer, _FRAMES_PER_READ * _BYTES_PER_SAMPLE
+            )
+        finally:
+            # cerrar arecord: sin stream de fondo que acumule audio entre turnos.
+            mic.terminate()
+            try:
+                mic.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                mic.kill()
 
     return listen_one
+
+
+def _capture_phrase(stream: Any, recognizer: Any, chunk_bytes: int) -> str:
+    """Lee bloques de audio de `stream` hasta que Vosk detecta fin de frase.
+
+    Devuelve el texto transcrito, o "" si el stream se agota antes.
+    """
+    while True:
+        data = stream.read(chunk_bytes)
+        if not data:
+            return ""
+        if recognizer.AcceptWaveform(data):
+            result = json.loads(recognizer.Result())
+            return str(result.get("text", "")).strip()
+
 
 
 class VoskHearing(HearingPort):

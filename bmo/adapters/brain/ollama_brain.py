@@ -11,6 +11,20 @@ from bmo.config import BrainConfig
 from bmo.domain.models import BrainDecision, Message, ToolCall, Utterance
 from bmo.tools.tool import Tool
 
+# Rangos Unicode de emojis/pictogramas. Un modelo pequeno ignora "no emojis" en
+# el prompt, asi que los quitamos aqui (el TTS de Piper los lee como ruido).
+_EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001f300-\U0001faff"  # simbolos, pictogramas, emoticonos, transporte
+    "\U00002600-\U000027bf"  # simbolos varios + dingbats
+    "\U0001f1e6-\U0001f1ff"  # indicadores regionales (banderas)
+    "\U00002b00-\U00002bff"  # simbolos y flechas varios (estrellas...)
+    "\U0000fe00-\U0000fe0f"  # selectores de variacion
+    "\U0000200d"  # zero-width joiner (une emojis compuestos)
+    "]+",
+    flags=re.UNICODE,
+)
+
 
 class OllamaBrain:
     """El cerebro de BMO sobre un servidor Ollama local."""
@@ -149,11 +163,17 @@ class OllamaBrain:
         first = tools[0].name
         lines += [
             "",
+            "## STYLE",
+            "Answer ONLY what the user asked, nothing more. Do NOT introduce "
+            "yourself or repeat who you are unless the user literally asks 'who "
+            "are you'. NEVER start an answer with your name or 'I'm BMO' — "
+            "especially a vision answer: just say what you see.",
+            "",
             "## Examples",
             "These go in CHAT MODE (text, NEVER an action):",
             "  User: hi -> Hi! How are you?",
             "  User: how are you? -> Great, ready to play!",
-            "  User: who are you? -> I'm BMO, your little robot friend!",
+            "  User: who are you? -> I'm BMO! How can I help?",
             "  User: tell me a joke -> Why did the computer go to the beach? "
             "To surf the web!",
             "  User: what day is it today? -> Oh, I don't know that, but we can "
@@ -189,9 +209,12 @@ class OllamaBrain:
 
     @staticmethod
     def _clean_reply(text: str) -> str:
-        """Limpia bloques JSON residuales de una respuesta de texto.
+        """Limpia bloques JSON residuales y emojis de una respuesta de texto.
         """
-        cleaned = re.sub(r"\{.*\}", "", text, flags=re.DOTALL).strip()
+        cleaned = re.sub(r"\{.*\}", "", text, flags=re.DOTALL)
+        cleaned = _EMOJI_PATTERN.sub("", cleaned)
+        cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+        cleaned = re.sub(r" +([.,!?])", r"\1", cleaned).strip()
         return cleaned or "sorry, I didn't get that. can you say it again?"
 
     @staticmethod

@@ -17,6 +17,7 @@ from bmo.builder import (
     build_devices,
     build_face,
     build_hearing,
+    build_notes,
     build_voice,
 )
 from bmo.config import Config
@@ -25,7 +26,6 @@ from bmo.domain.wakeword import WakeWord
 from bmo.adapters.voice.serialized_voice import SerializedVoice
 from bmo.interfaces.console import repl
 from bmo.interfaces.microphone import listen_loop
-from bmo.interfaces.touch import build_touch_reaction
 from bmo.ports.voice import NullVoice
 
 
@@ -55,10 +55,11 @@ def run(config: Config) -> None:
     # una sola tarjeta de sonido para diferentes features no usen el mismo driver a la vez
     voice = SerializedVoice(build_voice(config) or NullVoice())
     hearing = build_hearing(config)
-    agent = build_agent(brain, camera, vision, face, voice)
-    # tactil: si hay pantalla, tocarla hace que BMO se queje y vuelva a su cara
-    if face is not None:
-        face.set_on_touch(build_touch_reaction(face, voice))
+    notes = build_notes(config)
+    agent = build_agent(brain, camera, vision, face, voice, notes)
+    # tactil: si hay pantalla y notas, tocarla abre el menu de notas guardadas
+    if face is not None and notes is not None:
+        face.set_notes_provider(notes.all)
     # si hay micrófono, guarda el callable con el bucle de escucha
     if hearing is not None and hearing.available:
         wake = WakeWord(config.hearing.wake_word)
@@ -105,28 +106,16 @@ def run(config: Config) -> None:
 
 
 def setup_logging(debug: bool = False) -> None:
-    """Configura la verbosidad segun el modo.
-
-    debug=True  -> se ve TODO (BMO interno + librerias de terceros).
-    debug=False -> silencio TOTAL de logs; la entrada/salida se imprime aparte
-                   (USER>/BMO>). Si algo falla, se arranca con `bmo debug`.
-    """
     logging.basicConfig(
         level=logging.DEBUG if debug else logging.CRITICAL,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
         force=True,
     )
-    # libcamera es C: su verbosidad no pasa por logging, se fija por env var.
     os.environ["LIBCAMERA_LOG_LEVELS"] = "*:INFO" if debug else "*:FATAL"
 
 
 def resolve_debug(argv: List[str], config_debug: bool) -> bool:
-    """'bmo debug' fuerza modo debug; cualquier otra cosa usa la config.
-
-    Sin argumento (solo 'bmo') o con uno desconocido, gana lo que diga
-    config.yaml (por defecto, modo normal).
-    """
     if argv and argv[0].strip().lower() == "debug":
         return True
     return config_debug

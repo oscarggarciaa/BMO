@@ -29,5 +29,8 @@ BMO_SYSTEM_PROMPT = (
     "surroundings (no couch, no smiling, no sitting). Just the objects and "
     "how many. Do NOT reuse objects from earlier messages or from these "
     "instructions — 'LABEL' is a placeholder, not a real object. If the "
-    "output lists no objects, say you don't see anything right now."
+    "output lists no objects, say you don't see anything right now.\n"
+    "When the user asks you to remember something, take a note, write it down "
+    "or save a reminder, use the 'save_note' tool with the text to remember, "
+    "then confirm cheerfully in one short sentence."
 )

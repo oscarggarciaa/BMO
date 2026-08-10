@@ -129,7 +129,8 @@ class Agent:
             return f"error: la tool '{call.name}' no existe"
 
         try:
-            return str(tool.run(question=question, **call.arguments))
+            # question es el fallback; los argumentos de la acción tienen prioridad
+            return str(tool.run(**{"question": question, **call.arguments}))
         except Exception as exc:
             logger.exception("fallo ejecutando la tool '%s'", call.name)
             return f"error ejecutando '{call.name}': {exc}"

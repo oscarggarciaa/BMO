@@ -66,6 +66,12 @@ class ScreenConfig:
 
 
 @dataclass(frozen=True)
+class NotesConfig:
+    enabled: bool = True
+    path: str = "notes"  # carpeta donde se guardan las notas .md (estilo Obsidian)
+
+
+@dataclass(frozen=True)
 class Config:
     camera: CameraConfig
     vision: VisionConfig
@@ -73,6 +79,7 @@ class Config:
     voice: VoiceConfig
     hearing: HearingConfig
     screen: ScreenConfig
+    notes: NotesConfig
     # debug: True muestra TODO en el log; False solo entrada/salida.
     debug: bool = False
 
@@ -86,6 +93,7 @@ class Config:
             voice=VoiceConfig(**data.get("voice", {})),
             hearing=HearingConfig(**data.get("hearing", {})),
             screen=ScreenConfig(**data.get("screen", {})),
+            notes=NotesConfig(**data.get("notes", {})),
             debug=bool(data.get("debug", False)),
         )
 

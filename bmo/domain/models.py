@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -61,6 +62,20 @@ class Utterance:
 
     text: str
     speaker: str = "human"
+
+
+@dataclass(frozen=True)
+class Note:
+    """Una nota que BMO guarda para recordar (estilo Obsidian).
+
+    - title: título corto para listarla en el menú táctil.
+    - content: el texto completo de la nota.
+    - created_at: momento en que se guardó (ordena el listado, la más nueva arriba).
+    """
+
+    title: str
+    content: str
+    created_at: datetime
 
 
 class Expression(str, Enum):

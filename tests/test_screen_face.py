@@ -7,11 +7,11 @@ loop de tkinter y la carga con PIL se prueban a mano en la Pi, no aca.
 
 from __future__ import annotations
 
-import threading
+from datetime import datetime
 from pathlib import Path
 
-from bmo.domain.models import Expression
-from bmo.interfaces.screen.tk_face import TkFace
+from bmo.domain.models import Expression, Note
+from bmo.interfaces.screen.tk_face import TkFace, format_note_preview
 from bmo.ports.face import FacePort
 
 _FACES_DIR = Path(__file__).resolve().parents[1] / "bmo" / "interfaces" / "screen" / "faces"
@@ -29,20 +29,57 @@ def test_show_updates_current_expression() -> None:
     assert face.current is Expression.HAPPY
 
 
-def test_handle_touch_runs_registered_callback_in_a_thread() -> None:
+def test_notes_provider_is_stored_and_used() -> None:
     face = TkFace(faces_dir=_FACES_DIR)
-    fired = threading.Event()
-    face.set_on_touch(fired.set)
+    note = Note(title="Milk", content="Buy milk", created_at=datetime.now())
+    face.set_notes_provider(lambda: [note])
 
-    face._handle_touch()
-
-    assert fired.wait(timeout=1)
+    assert face._notes_to_show() == [note]
 
 
-def test_handle_touch_without_callback_is_noop() -> None:
+def test_notes_to_show_is_empty_without_provider() -> None:
     face = TkFace(faces_dir=_FACES_DIR)
 
+    assert face._notes_to_show() == []
+
+
+def test_notes_to_show_survives_a_failing_provider() -> None:
+    face = TkFace(faces_dir=_FACES_DIR)
+
+    def boom() -> list:
+        raise RuntimeError("disk on fire")
+
+    face.set_notes_provider(boom)
+
+    assert face._notes_to_show() == []
+
+
+def test_handle_touch_without_window_is_noop() -> None:
+    face = TkFace(faces_dir=_FACES_DIR)
+    face.set_notes_provider(lambda: [])
+
+    # sin ventana (tests headless) tocar no debe intentar dibujar ni romper
     assert face._handle_touch() is None
+    assert face.menu_open is False
+
+
+def test_format_note_preview_flattens_and_truncates() -> None:
+    note = Note(
+        title="t",
+        content="line one\n   line two   with   spaces",
+        created_at=datetime.now(),
+    )
+
+    assert format_note_preview(note) == "line one line two with spaces"
+
+
+def test_format_note_preview_truncates_long_bodies() -> None:
+    note = Note(title="t", content="x" * 500, created_at=datetime.now())
+
+    preview = format_note_preview(note, max_len=10)
+
+    assert preview == "x" * 10 + "…"
+
 
 
 def test_frames_for_returns_sorted_pngs() -> None:

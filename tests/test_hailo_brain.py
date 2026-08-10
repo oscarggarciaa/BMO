@@ -57,6 +57,14 @@ class FakeTool:
     description = "see the world in front of you"
 
 
+class FakeNoteTool:
+    """Tool con argumentos: ejercita el ACTION MODE con campos extra."""
+
+    name = "save_note"
+    description = "write down a note to remember it"
+    parameters = {"content": {"type": "string", "description": "the note text"}}
+
+
 def _user(content: str) -> Message:
     return Message(role="user", content=content)
 
@@ -123,6 +131,20 @@ def test_action_mode_extracts_action_despite_trailing_tokens() -> None:
 
     assert decision.tool_calls
     assert decision.tool_calls[0].name == "look"
+
+
+def test_action_mode_captures_arguments() -> None:
+    # El modelo devuelve el nombre de la accion Y el contenido: ambos deben
+    # viajar en el ToolCall. Sin esto, save_note se ejecutaria sin texto.
+    client = FakeClient('{"action": "save_note", "content": "buy milk"}')
+    brain = HailoBrain(model="qwen3:1.7b", host="x", client=client)
+
+    decision = brain.decide([_user("remember to buy milk")], tools=[FakeNoteTool()])
+
+    assert decision.tool_calls
+    call = decision.tool_calls[0]
+    assert call.name == "save_note"
+    assert call.arguments == {"content": "buy milk"}
 
 
 def test_warm_up_is_inherited_from_ollama_brain() -> None:

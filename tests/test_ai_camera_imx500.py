@@ -24,6 +24,7 @@ from bmo.config import (
     CameraConfig,
     Config,
     HearingConfig,
+    NotesConfig,
     ScreenConfig,
     VisionConfig,
     VoiceConfig,
@@ -259,6 +260,7 @@ def _imx500_config() -> Config:
         voice=VoiceConfig(),
         hearing=HearingConfig(),
         screen=ScreenConfig(enabled=False),
+        notes=NotesConfig(enabled=False),
     )
 
 

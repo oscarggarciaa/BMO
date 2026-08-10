@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
-from bmo.domain.models import Expression
+from bmo.domain.models import Expression, Note
 
 
 class FacePort(ABC):
@@ -29,11 +29,14 @@ class FacePort(ABC):
     def stop(self) -> None:
         """Cierra la cara y libera recursos. Por defecto no hace nada."""
 
-    def set_on_touch(self, callback: Optional[Callable[[], None]]) -> None:
-        """Registra un callback para cuando toquen la pantalla-cara.
+    def set_notes_provider(
+        self, provider: Optional[Callable[[], List[Note]]]
+    ) -> None:
+        """Registra la fuente de notas a mostrar al tocar la pantalla-cara.
 
-        La pantalla táctil y la cara son el mismo dispositivo físico, así que el
-        toque entra por este port. Por defecto no hace nada (caras sin táctil).
+        La pantalla táctil y la cara son el mismo dispositivo físico: al tocar,
+        BMO abre un menú con las notas que devuelve `provider()`. Por defecto no
+        hace nada (caras sin táctil o sin notas).
         """
 
 

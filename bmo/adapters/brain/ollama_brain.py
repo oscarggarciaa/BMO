@@ -78,9 +78,9 @@ class OllamaBrain:
         )
 
         text = response["message"].get("content") or ""
-        action = self._extract_action(text, {t.name for t in tools})
-        if action is not None:
-            return BrainDecision(tool_calls=(ToolCall(name=action),))
+        call = self._extract_action(text, {t.name for t in tools})
+        if call is not None:
+            return BrainDecision(tool_calls=(call,))
         reply = self._clean_reply(self._sanitize_content(text))
         return BrainDecision(reply=Utterance(text=reply, speaker="bmo"))
 
@@ -137,6 +137,9 @@ class OllamaBrain:
             "To run an action reply ONLY with this JSON, on a single line and "
             "with absolutely nothing else before or after:",
             '{"action": "exact_action_name"}',
+            "If the action needs extra information, add those fields to the SAME "
+            'JSON object, for example: {"action": "exact_action_name", '
+            '"field": "value"}.',
             "No explanations, greetings or extra text: ONLY the JSON.",
             "",
             "## After an action",
@@ -160,6 +163,10 @@ class OllamaBrain:
         ]
         for tool in tools:
             lines.append(f'- "{tool.name}": {tool.description}')
+            params = getattr(tool, "parameters", {}) or {}
+            if params:
+                fields = ", ".join(f'"{name}"' for name in params)
+                lines.append(f"    include these fields in the JSON: {fields}")
         first = tools[0].name
         lines += [
             "",
@@ -189,11 +196,24 @@ class OllamaBrain:
             f'  User: look and tell me what is in front -> {{"action": "{first}"}}',
             f'  User: take a picture -> {{"action": "{first}"}}',
         ]
+        arg_tool = next((t for t in tools if getattr(t, "parameters", {})), None)
+        if arg_tool is not None:
+            field = next(iter(arg_tool.parameters))
+            lines += [
+                f'  User: remember to buy milk -> '
+                f'{{"action": "{arg_tool.name}", "{field}": "buy milk"}}',
+                f'  User: take a note that the door is broken -> '
+                f'{{"action": "{arg_tool.name}", "{field}": "the door is broken"}}',
+            ]
         return "\n".join(lines)
 
     @staticmethod
-    def _extract_action(text: str, valid_names: Set[str]) -> Optional[str]:
-        """Busca un JSON {"action": "..."} en el texto y valida la acción."""
+    def _extract_action(text: str, valid_names: Set[str]) -> Optional[ToolCall]:
+        """Busca un JSON {"action": "...", ...} y arma el ToolCall validado.
+
+        Además del nombre de la acción, cualquier otro campo del JSON viaja como
+        argumento de la tool (p. ej. {"action": "save_note", "content": "..."}).
+        """
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if not match:
             return None
@@ -204,7 +224,10 @@ class OllamaBrain:
         if not isinstance(data, dict):
             return None
         action = str(data.get("action", "")).strip()
-        return action if action in valid_names else None
+        if action not in valid_names:
+            return None
+        arguments = {k: v for k, v in data.items() if k != "action"}
+        return ToolCall(name=action, arguments=arguments)
 
     @staticmethod
     def _clean_reply(text: str) -> str:
@@ -222,7 +245,8 @@ class OllamaBrain:
         """
         if message.role == "assistant" and message.tool_calls:
             call = message.tool_calls[0]
-            return {"role": "assistant", "content": json.dumps({"action": call.name})}
+            payload = {"action": call.name, **call.arguments}
+            return {"role": "assistant", "content": json.dumps(payload)}
         if message.role == "tool":
             etiqueta = message.name or "action"
             return {

@@ -15,9 +15,11 @@ from bmo.domain.persona import BMO_SYSTEM_PROMPT
 from bmo.ports.camera import CameraSourcePort
 from bmo.ports.face import FacePort
 from bmo.ports.hearing import HearingPort
+from bmo.ports.notes import NotesPort
 from bmo.ports.vision import VisionPort
 from bmo.ports.voice import VoicePort
 from bmo.tools.look import build_look_tool
+from bmo.tools.notes import build_save_note_tool
 from bmo.tools.tool import ToolRegistry
 
 if TYPE_CHECKING:
@@ -122,12 +124,28 @@ def build_hearing(config: Config) -> Optional[HearingPort]:
     return None
 
 
+def build_notes(config: Config) -> Optional[NotesPort]:
+    """Factory de las notas: arma el almacén markdown si está habilitado (lazy).
+
+    Si `notes.enabled` es False, devuelve None: no se registra la tool `save_note`
+    ni el menú táctil de notas.
+    """
+    if not config.notes.enabled:
+        return None
+    from pathlib import Path
+
+    from bmo.adapters.memory.markdown_notes import MarkdownNotes
+
+    return MarkdownNotes(Path(config.notes.path))
+
+
 def build_agent(
     brain,
     camera: CameraSourcePort,
     vision: VisionPort,
     face: Optional[FacePort] = None,
     voice: Optional[VoicePort] = None,
+    notes: Optional[NotesPort] = None,
 ) -> Agent:
     """Ensambla el Agente: registra las tools y le inyecta el cerebro.
 
@@ -135,6 +153,8 @@ def build_agent(
     """
     registry = ToolRegistry()
     registry.register(build_look_tool(camera, vision))
+    if notes is not None:
+        registry.register(build_save_note_tool(notes))
     return Agent(
         brain=brain,
         tools=registry,

@@ -53,6 +53,10 @@ screen:                       # cara de BMO directo en la pantalla fisica (tkint
   fullscreen: true
   fps: 4
 
+notes:                        # notas que BMO guarda (estilo Obsidian: un .md por nota)
+  enabled: true
+  path: notes                 # carpeta donde se guardan; tocar la pantalla las lista
+
 # debug: false -> modo normal, el log solo muestra ENTRADA (usuario) y SALIDA (BMO).
 #        true  -> modo debug, el log muestra TODO (pasos, tools, resultados...).
 debug: false

@@ -173,7 +173,6 @@ class OllamaBrain:
             "These go in CHAT MODE (text, NEVER an action):",
             "  User: hi -> Hi! How are you?",
             "  User: how are you? -> Great, ready to play!",
-            "  User: who are you? -> I'm BMO! How can I help?",
             "  User: tell me a joke -> Why did the computer go to the beach? "
             "To surf the web!",
             "  User: what day is it today? -> Oh, I don't know that, but we can "

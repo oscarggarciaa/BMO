@@ -32,6 +32,7 @@ def listen_loop(
             command = wake.detect(transcript)
             if command is None:
                 continue  # sin wake-word: BMO sigue inactivo
+            print(f"USER> {command or 'hello'}")
             try:
                 # empieza la conversación
                 reply = agent.ask(command or "hello")

@@ -5,8 +5,11 @@ Punto de entrada de BMO: carga la config, construye con el builder y arranca.
 from __future__ import annotations
 
 import logging
+logger = logging.getLogger(__name__)
+import os
+import sys
 import threading
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from bmo.builder import (
     build_agent,
@@ -44,7 +47,7 @@ def warm_up_then_serve(
 
 def run(config: Config) -> None:
     """Arma BMO desde la config y lo pone a atender (por voz o por teclado)."""
-    print(f"BMO arrancando... cerebro={config.brain.adapter}:{config.brain.model}")
+    logger.debug(f"BMO arrancando... cerebro={config.brain.adapter}:{config.brain.model}")
 
     camera, vision = build_devices(config)
     brain = build_brain(config)
@@ -101,16 +104,39 @@ def run(config: Config) -> None:
             camera.stop()
 
 
-def main() -> None:
+def setup_logging(debug: bool = False) -> None:
+    """Configura la verbosidad segun el modo.
+
+    debug=True  -> se ve TODO (BMO interno + librerias de terceros).
+    debug=False -> silencio TOTAL de logs; la entrada/salida se imprime aparte
+                   (USER>/BMO>). Si algo falla, se arranca con `bmo debug`.
+    """
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG if debug else logging.CRITICAL,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
+        force=True,
     )
-    for noisy in ("httpx", "httpcore"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
+    # libcamera es C: su verbosidad no pasa por logging, se fija por env var.
+    os.environ["LIBCAMERA_LOG_LEVELS"] = "*:INFO" if debug else "*:FATAL"
+
+
+def resolve_debug(argv: List[str], config_debug: bool) -> bool:
+    """'bmo debug' fuerza modo debug; cualquier otra cosa usa la config.
+
+    Sin argumento (solo 'bmo') o con uno desconocido, gana lo que diga
+    config.yaml (por defecto, modo normal).
+    """
+    if argv and argv[0].strip().lower() == "debug":
+        return True
+    return config_debug
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    argv = sys.argv[1:] if argv is None else argv
     # carga la config del fichero con todos los parámetros
     config = Config.load("config.yaml")
+    setup_logging(resolve_debug(argv, config.debug))
     run(config)
 
 

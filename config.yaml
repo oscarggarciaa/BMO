@@ -52,3 +52,7 @@ screen:                       # cara de BMO directo en la pantalla fisica (tkint
   enabled: true
   fullscreen: true
   fps: 4
+
+# debug: false -> modo normal, el log solo muestra ENTRADA (usuario) y SALIDA (BMO).
+#        true  -> modo debug, el log muestra TODO (pasos, tools, resultados...).
+debug: false

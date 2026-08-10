@@ -47,17 +47,17 @@ class Agent:
         """
         # añadir al historial
         self._history.append(Message(role="user", content=text))
-        logger.info("USER preguntó: %s", text)
+        logger.debug("USER preguntó: %s", text)
         self._face.show(Expression.THINKING)
 
         for step in range(self._max_steps):
-            logger.info("paso %d/%d: BMO está pensando...", step + 1, self._max_steps)
+            logger.debug("paso %d/%d: BMO está pensando...", step + 1, self._max_steps)
             # el brain decide qué hacer
             decision = self._brain.decide(self._history, self._tools.all())
 
             if not decision.wants_tools:
                 reply = decision.reply or Utterance(text="", speaker="bmo")
-                logger.info("BMO decidió responder: %s", reply.text)
+                logger.debug("BMO decidió responder: %s", reply.text)
                 # contestación por voz
                 self._voice.speak(
                     reply.text,
@@ -67,7 +67,7 @@ class Agent:
                 self._history.append(Message(role="assistant", content=reply.text))
                 return reply
 
-            logger.info(
+            logger.debug(
                 "BMO decidió usar %d tool(s): %s",
                 len(decision.tool_calls),
                 ", ".join(c.name for c in decision.tool_calls),
@@ -82,15 +82,16 @@ class Agent:
             )
             # para ejecutar una tool el brain nos pasa una respuesta con el action que quiere ejecutar
             for call in decision.tool_calls:
-                logger.info("ejecutando tool '%s' con args=%s", call.name, call.arguments)
+                logger.debug("ejecutando tool '%s' con args=%s", call.name, call.arguments)
                 result = self._execute(call, question=text)
-                logger.info("tool '%s' devolvió: %s", call.name, result)
+                logger.debug("tool '%s' devolvió: %s", call.name, result)
                 self._history.append(
                     Message(role="tool", content=result, name=call.name)
                 )
                 # respuesta de la tool = respuesta que mostramos por pantalla
                 if self._tool_is_direct(call.name):
-                    logger.info("tool '%s' es directa: su resultado es la respuesta", call.name)
+                    logger.debug("tool '%s' es directa: su resultado es la respuesta", call.name)
+                    logger.debug("BMO respondió: %s", result)
                     self._voice.speak(
                         result,
                         on_audio_start=lambda: self._face.show(Expression.TALKING),

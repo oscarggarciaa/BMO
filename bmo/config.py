@@ -73,6 +73,8 @@ class Config:
     voice: VoiceConfig
     hearing: HearingConfig
     screen: ScreenConfig
+    # debug: True muestra TODO en el log; False solo entrada/salida.
+    debug: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Config":
@@ -84,6 +86,7 @@ class Config:
             voice=VoiceConfig(**data.get("voice", {})),
             hearing=HearingConfig(**data.get("hearing", {})),
             screen=ScreenConfig(**data.get("screen", {})),
+            debug=bool(data.get("debug", False)),
         )
 
     @classmethod

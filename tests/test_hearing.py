@@ -95,6 +95,19 @@ def test_listen_loop_asks_agent_only_after_wake_word() -> None:
     assert agent.asked == ["hello", "what do you see"]
 
 
+def test_listen_loop_prints_clean_user_and_bmo_lines(capsys) -> None:
+    # En modo normal la entrada/salida se muestra con print limpio (USER>/BMO>),
+    # sin timestamps ni logger, y sin duplicar la respuesta.
+    agent = SpyAgent()
+    hearing = ScriptedHearing(["hello how are you"])
+
+    listen_loop(agent, hearing, WakeWord())
+
+    out = capsys.readouterr().out
+    assert "USER> how are you" in out
+    assert "BMO> ok" in out
+
+
 # --- VoskHearing: el adapter delega en una sesion inyectable ---------------
 
 

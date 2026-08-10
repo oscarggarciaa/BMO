@@ -48,8 +48,10 @@ def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Sessi
     no hay stream acumulando audio rancio ni su propia voz (lo que antes
     provocaba overruns y transcripciones basura).
     """
-    from vosk import KaldiRecognizer, Model  # lazy: solo en la Pi
+    from vosk import KaldiRecognizer, Model, SetLogLevel  # lazy: solo en la Pi
 
+    # Vosk escupe logs en C al cargar el modelo; en modo normal los callamos.
+    SetLogLevel(0 if logging.getLogger("bmo").isEnabledFor(logging.DEBUG) else -1)
     model = Model(model_path)
 
     def listen_one() -> str:

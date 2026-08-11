@@ -11,8 +11,10 @@ from bmo.config import BrainConfig
 from bmo.domain.models import BrainDecision, Message, ToolCall, Utterance
 from bmo.tools.tool import Tool
 
-# Rangos Unicode de emojis/pictogramas. Un modelo pequeno ignora "no emojis" en
-# el prompt, asi que los quitamos aqui (el TTS de Piper los lee como ruido).
+# Lo que dice BMO cuando el cerebro no responde (modelo caído, 500, sin servidor).
+_BRAIN_ERROR_REPLY = "Oops! My brain is not working right now."
+
+# regex para quitar emojis
 _EMOJI_PATTERN = re.compile(
     "["
     "\U0001f300-\U0001faff"  # simbolos, pictogramas, emoticonos, transporte
@@ -42,8 +44,7 @@ class OllamaBrain:
         return cls(model=config.model, host=config.host)
 
     def warm_up(self) -> None:
-        """Carga el modelo en RAM con una consulta mínima al arrancar.
-        """
+        """Carga el modelo en RAM con una consulta mínima al arrancar"""
         try:
             self._client.chat(
                 model=self._model,
@@ -67,15 +68,23 @@ class OllamaBrain:
             else:
                 ollama_messages.insert(0, {"role": "system", "content": protocol})
 
-        response = self._client.chat(
-            model=self._model,
-            messages=ollama_messages,
-            options={
-                "temperature": 0.2,
-                "top_p": 0.9,
-                "repeat_penalty": 1.3,
-            },
-        )
+        try:
+            response = self._client.chat(
+                model=self._model,
+                messages=ollama_messages,
+                options={
+                    "temperature": 0.2,
+                    "top_p": 0.9,
+                    "repeat_penalty": 1.3,
+                },
+            )
+        except Exception:
+            # cerebro no responde
+            logging.getLogger(__name__).warning(
+                "el cerebro no respondió; BMO se disculpa en vez de romper",
+                exc_info=True,
+            )
+            return BrainDecision(reply=Utterance(text=_BRAIN_ERROR_REPLY, speaker="bmo"))
 
         text = response["message"].get("content") or ""
         call = self._extract_action(text, {t.name for t in tools})
@@ -231,8 +240,7 @@ class OllamaBrain:
 
     @staticmethod
     def _clean_reply(text: str) -> str:
-        """Limpia bloques JSON residuales y emojis de una respuesta de texto.
-        """
+        """Limpia bloques JSON residuales y emojis de una respuesta de texto."""
         cleaned = re.sub(r"\{.*\}", "", text, flags=re.DOTALL)
         cleaned = _EMOJI_PATTERN.sub("", cleaned)
         cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)

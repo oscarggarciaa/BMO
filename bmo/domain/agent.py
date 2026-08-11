@@ -52,7 +52,7 @@ class Agent:
 
         for step in range(self._max_steps):
             logger.debug("paso %d/%d: BMO está pensando...", step + 1, self._max_steps)
-            # el brain decide qué hacer
+            # el brain decide qué hacer, si la tool no es directa, la respuesta de la tool se añade al historial y el brain decide otra vez
             decision = self._brain.decide(self._history, self._tools.all())
 
             if not decision.wants_tools:

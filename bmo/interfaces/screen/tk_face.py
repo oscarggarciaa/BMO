@@ -26,12 +26,12 @@ _IMG_EXT = {".png", ".gif", ".jpg", ".jpeg"}
 _DEFAULT_FACES_DIR = Path(__file__).parent / "faces"
 _PREVIEW_LEN = 240
 
-# Colores tomados de la cara real de BMO (muestreados de faces/neutral/01.png).
-_BMO_BG = "#bdffcb"       # verde menta del fondo de la cara
-_BMO_DARK = "#2f5a41"     # verde oscuro de ojos/boca: texto y acentos
-_CARD_BG = "#ffffff"      # tarjeta de cada nota
-_CARD_LINE = "#8fe0a3"    # borde suave de la tarjeta
-_DANGER = "#c0533f"       # rojo apagado para el borrar
+#colores bmo
+_BMO_BG = "#bdffcb"       
+_BMO_DARK = "#2f5a41"
+_CARD_BG = "#ffffff"
+_CARD_LINE = "#8fe0a3"
+_DANGER = "#c0533f"
 
 
 class TkFace(FacePort):
@@ -96,7 +96,7 @@ class TkFace(FacePort):
             return []
         try:
             return list(self._notes_provider())
-        except Exception:  # noqa: BLE001 - un fallo leyendo notas no rompe la cara
+        except Exception:
             _LOG.warning("no se pudieron leer las notas para el menú", exc_info=True)
             return []
 
@@ -144,7 +144,7 @@ class TkFace(FacePort):
             self._preload()
             self._tick()
             self._available = True
-        except Exception:  # noqa: BLE001 - sin display, BMO recurre al modo consola
+        except Exception:
             self._available = False
             self._root = None
             _LOG.warning(
@@ -161,7 +161,7 @@ class TkFace(FacePort):
             return
         try:
             root.after(0, root.destroy)
-        except Exception:  # noqa: BLE001 - la ventana ya pudo cerrarse
+        except Exception:
             pass
 
     def _preload(self) -> None:
@@ -177,7 +177,7 @@ class TkFace(FacePort):
             for path in self._frames_for(expression):
                 try:
                     img = Image.open(path).convert("RGB")
-                except Exception:  # noqa: BLE001 - un frame roto no interrumpe la cara
+                except Exception:
                     _LOG.warning("no se pudo cargar el frame %s", path)
                     continue
                 scale = min(screen_w / img.width, screen_h / img.height)
@@ -294,7 +294,7 @@ class TkFace(FacePort):
         if deleter is not None:
             try:
                 deleter(note)
-            except Exception:  # noqa: BLE001 - un fallo al borrar no rompe la cara
+            except Exception:
                 _LOG.warning("no se pudo borrar la nota", exc_info=True)
         if self._root is not None and self._menu is not None:
             self._refresh_menu()

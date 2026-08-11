@@ -14,11 +14,7 @@ class HailoOllamaClient:
     """Cliente HTTP minimalista para hailo-ollama.
     """
 
-    # hailo-ollama re-serializa los mensajes a JSON para su template de chat y
-    # NO escapa los saltos de linea: un system prompt multilinea revienta el
-    # parseo ("control character U+000A must be escaped") y devuelve 500
-    # HAILO_INTERNAL_FAILURE. Se colapsan los control chars a un solo espacio
-    # antes de enviar; el prompt se lee igual en una linea.
+    # regex para quitar caracteres de control
     _CONTROL_CHARS = re.compile(r"\s*[\r\n\t]+\s*")
 
     def __init__(self, host: str, http: Optional[Any] = None) -> None:

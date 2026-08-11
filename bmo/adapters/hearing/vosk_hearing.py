@@ -1,15 +1,3 @@
-"""Adapter de oído con Vosk: micrófono -> texto, offline y liviano.
-
-Vosk es un STT offline que funciona bien en la Pi (modelo small ~40MB). Un solo
-motor sirve para DETECTAR 'hello' y para transcribir el comando: el audio se
-captura con `arecord` (ya probado con el conjunto USB) y se transcribe en
-streaming hasta que Vosk detecta el fin de la frase (silencio).
-
-Igual que PiperVoice, tiene una costura inyectable (`session`) para poder
-testear la lógica sin tener vosk ni micrófono: los tests pasan una sesión
-falsa; en la Pi se arma la real (import lazy de vosk).
-"""
-
 from __future__ import annotations
 
 import json
@@ -22,9 +10,6 @@ from bmo.config import HearingConfig
 from bmo.ports.hearing import HearingPort
 
 _LOG = logging.getLogger(__name__)
-
-# Una sesión de escucha: cada llamada bloquea y devuelve UNA frase transcrita.
-# Encapsula el modelo Vosk + el stream de arecord, ya inicializados una vez.
 Session = Callable[[], str]
 
 _FRAMES_PER_READ = 4000  # frames por lectura, valor recomendado por Vosk
@@ -48,9 +33,8 @@ def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Sessi
     no hay stream acumulando audio rancio ni su propia voz (lo que antes
     provocaba overruns y transcripciones basura).
     """
-    from vosk import KaldiRecognizer, Model, SetLogLevel  # lazy: solo en la Pi
+    from vosk import KaldiRecognizer, Model, SetLogLevel
 
-    # Vosk escupe logs en C al cargar el modelo; en modo normal los callamos.
     SetLogLevel(0 if logging.getLogger("bmo").isEnabledFor(logging.DEBUG) else -1)
     model = Model(model_path)
 
@@ -119,18 +103,13 @@ class VoskHearing(HearingPort):
     def listen(self) -> str:
         try:
             return self._ensure_session()()
-        except Exception:  # noqa: BLE001 - un fallo de audio no debe interrumpir a BMO
+        except Exception:
             _LOG.warning("no se pudo escuchar (vosk/arecord)", exc_info=True)
             return ""
 
     @property
     def available(self) -> bool:
-        """True si BMO puede escuchar: el modelo Vosk debe existir en disco.
-
-        Con una sesión inyectada (tests) se asume disponible. Si el modelo no
-        está descargado, devuelve False para que el arranque recurra al teclado
-        en vez de entrar en un bucle de fallos.
-        """
+        """True si BMO puede escuchar: el modelo Vosk debe existir en disco."""
         if self._session is not None:
             return True
         return os.path.isdir(self._model_path)

@@ -35,8 +35,7 @@ def warm_up_then_serve(
     on_warmup_start: Optional[Callable[[], None]] = None,
     voice=None,
 ) -> None:
-    """Calienta el cerebro y después arranca la atención al usuario.
-    """
+    """Calienta el cerebro y después arranca la atención al usuario."""
     if on_warmup_start is not None:
         on_warmup_start()
     brain.warm_up()

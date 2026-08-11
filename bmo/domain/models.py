@@ -20,7 +20,7 @@ class BoundingBox:
 
 @dataclass(frozen=True)
 class Detection:
-    """Algo detectado en la escena (una cara, un ojo, una sonrisa...)."""
+    """Algo detectado en la escena."""
 
     label: str
     box: BoundingBox
@@ -29,9 +29,6 @@ class Detection:
 @dataclass(frozen=True)
 class Perception:
     """Lo que BMO 've' en un instante: la lista de detecciones.
-
-    Es el resultado puro de la visión, SIN píxeles dibujados. El agente razona
-    sobre esto; la capa de presentación (web/debug) es la que dibuja cajas.
     """
 
     detections: List[Detection] = field(default_factory=list)
@@ -58,8 +55,7 @@ class Perception:
 
 @dataclass(frozen=True)
 class Utterance:
-    """Algo dicho: por el humano (escuchado vía STT) o por BMO."""
-
+    """turno de conversación: lo que BMO dice o escucha"""
     text: str
     speaker: str = "human"
 
@@ -110,15 +106,6 @@ class ToolCall:
 @dataclass(frozen=True)
 class Message:
     """Un mensaje de la conversación que el agente le pasa al brain.
-
-    role: 'system' (personalidad/instrucciones) | 'user' (el humano) |
-    'assistant' (BMO) | 'tool' (resultado de ejecutar una tool).
-    El brain es STATELESS: recibe la lista completa de mensajes en cada llamada,
-    no guarda memoria. La memoria la lleva el agente.
-
-    - tool_calls: presente cuando el assistant (BMO) pidió ejecutar tools. Es el
-      turno que Ollama espera ANTES de los resultados 'tool'.
-    - name: en un mensaje 'tool', de qué tool viene el resultado.
     """
 
     role: str
@@ -130,10 +117,6 @@ class Message:
 @dataclass(frozen=True)
 class BrainDecision:
     """Lo que el brain resolvió tras razonar un paso.
-
-    Es una de dos cosas:
-    - `reply`: la respuesta final de BMO (no hacen falta más tools).
-    - `tool_calls`: tools que el agente debe ejecutar antes de volver a pensar.
     """
 
     reply: Optional[Utterance] = None

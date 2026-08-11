@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, List
 
 from bmo.adapters.brain.ollama_brain import OllamaBrain
+from bmo.domain.models import Message
 
 
 class FakeOllamaClient:
@@ -39,6 +40,22 @@ def test_warm_up_swallows_client_errors() -> None:
     brain = OllamaBrain(model="llama3.2:3b", host="x", client=BoomClient())
 
     brain.warm_up()  # no debe lanzar
+
+
+def test_decide_returns_a_friendly_oops_when_the_brain_fails() -> None:
+    # Si el cerebro revienta (500, sin modelo, servidor caido), BMO NO propaga
+    # el error: responde un 'oops' y la conversacion sigue.
+    class BoomClient:
+        def chat(self, *args: Any, **kwargs: Any) -> dict:
+            raise RuntimeError("500 Internal Server Error")
+
+    brain = OllamaBrain(model="qwen3:1.7b", host="x", client=BoomClient())
+
+    decision = brain.decide([Message(role="user", content="hi")], tools=[])
+
+    assert not decision.wants_tools
+    assert decision.reply is not None
+    assert "oops" in decision.reply.text.lower()
 
 
 def test_clean_reply_strips_trailing_emoji() -> None:

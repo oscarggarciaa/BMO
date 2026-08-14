@@ -146,6 +146,7 @@ def build_agent(
     face: Optional[FacePort] = None,
     voice: Optional[VoicePort] = None,
     notes: Optional[NotesPort] = None,
+    max_history: int = 0,
 ) -> Agent:
     """Ensambla el Agente: registra las tools y le inyecta el cerebro.
 
@@ -161,4 +162,5 @@ def build_agent(
         system_prompt=BMO_SYSTEM_PROMPT,
         face=face,
         voice=voice,
+        max_history=max_history,
     )

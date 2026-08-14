@@ -55,7 +55,7 @@ def run(config: Config) -> None:
     voice = SerializedVoice(build_voice(config) or NullVoice())
     hearing = build_hearing(config)
     notes = build_notes(config)
-    agent = build_agent(brain, camera, vision, face, voice, notes)
+    agent = build_agent(brain, camera, vision, face, voice, notes, max_history=config.brain.max_history)
     # tactil: si hay pantalla y notas, tocarla abre el menu de notas guardadas
     if face is not None and notes is not None:
         face.set_notes_provider(notes.all)

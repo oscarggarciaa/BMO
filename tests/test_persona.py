@@ -23,3 +23,10 @@ def test_prompt_still_describes_the_look_tool_contract() -> None:
     # El afinado de brevedad NO debe borrar el contrato de la tool 'look'.
     assert "look" in BMO_SYSTEM_PROMPT
     assert "veo:" in BMO_SYSTEM_PROMPT
+
+
+def test_prompt_has_no_copyable_placeholder() -> None:
+    # Bug real: el 1.7B copiaba literalmente el placeholder 'LABEL' y respondía
+    # 'veo: LABEL 0'. El prompt NO debe contener tokens copiables como 'LABEL'.
+    assert "LABEL" not in BMO_SYSTEM_PROMPT
+

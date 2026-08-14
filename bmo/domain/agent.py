@@ -24,10 +24,12 @@ class Agent:
         max_steps: int = 5,
         face: Optional[FacePort] = None,
         voice: Optional[VoicePort] = None,
+        max_history: int = 0,
     ) -> None:
         self._brain = brain
         self._tools = tools
         self._max_steps = max_steps
+        self._max_history = max_history
         self._face = face or NullFace()
         self._voice = voice or NullVoice()
         self._history: List[Message] = []
@@ -39,6 +41,19 @@ class Agent:
         """Copia de la memoria de conversación (solo lectura)."""
         return list(self._history)
 
+    def _trim_history(self) -> None:
+        """Acota el historial a system prompt + últimos N mensajes.
+
+        Con `max_history` <= 0 no recorta (ilimitado). Recortar al inicio del
+        turno evita llenar la caché de conversación del NPU sin romper el flujo
+        de tools del turno actual (esos mensajes se añaden después).
+        """
+        if self._max_history <= 0:
+            return
+        system = [m for m in self._history if m.role == "system"]
+        rest = [m for m in self._history if m.role != "system"]
+        self._history = system + rest[-self._max_history:]
+
     def ask(self, text: str) -> Utterance:
         """Le pregunta algo a BMO y devuelve su respuesta final.
 
@@ -47,6 +62,7 @@ class Agent:
         """
         # añadir al historial
         self._history.append(Message(role="user", content=text))
+        self._trim_history()
         logger.debug("USER preguntó: %s", text)
         self._face.show(Expression.THINKING)
 

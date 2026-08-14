@@ -34,6 +34,7 @@ brain:
   adapter: hailo
   model: qwen3:1.7b
   host: http://localhost:8000
+  max_history: 2          # system prompt + ultimos N mensajes (0 = ilimitado). Evita llenar la cache del NPU.
 
 voice:                        # BMO habla por los altavoces (TTS)
   adapter: piper              # none (muda) | piper (TTS neuronal offline)

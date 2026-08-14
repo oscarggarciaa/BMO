@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +39,9 @@ class BrainConfig:
     adapter: str = "ollama"
     model: str = "llama3.2:3b"
     host: str = "http://localhost:11434"
+    # historial máximo enviado al cerebro (system + últimos N mensajes). 0 =
+    # ilimitado. Acotarlo evita llenar la caché de conversación del NPU Hailo.
+    max_history: int = 0
 
 
 @dataclass(frozen=True)
@@ -87,13 +90,13 @@ class Config:
     def from_dict(cls, data: dict[str, Any]) -> "Config":
         data = data or {}
         return cls(
-            camera=CameraConfig(**data.get("camera", {})),
-            vision=VisionConfig(**data.get("vision", {})),
-            brain=BrainConfig(**data.get("brain", {})),
-            voice=VoiceConfig(**data.get("voice", {})),
-            hearing=HearingConfig(**data.get("hearing", {})),
-            screen=ScreenConfig(**data.get("screen", {})),
-            notes=NotesConfig(**data.get("notes", {})),
+            camera=CameraConfig(**_known(CameraConfig, data.get("camera"))),
+            vision=VisionConfig(**_known(VisionConfig, data.get("vision"))),
+            brain=BrainConfig(**_known(BrainConfig, data.get("brain"))),
+            voice=VoiceConfig(**_known(VoiceConfig, data.get("voice"))),
+            hearing=HearingConfig(**_known(HearingConfig, data.get("hearing"))),
+            screen=ScreenConfig(**_known(ScreenConfig, data.get("screen"))),
+            notes=NotesConfig(**_known(NotesConfig, data.get("notes"))),
             debug=bool(data.get("debug", False)),
         )
 
@@ -102,3 +105,13 @@ class Config:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return cls.from_dict(data)
+
+
+def _known(config_cls: type, section: dict[str, Any] | None) -> dict[str, Any]:
+    """Filtra una sección a las claves que el dataclass conoce.
+
+    Da robustez ante drift: una clave nueva en config.yaml que el código aún no
+    tiene se ignora en vez de tumbar el arranque.
+    """
+    valid = {f.name for f in fields(config_cls)}
+    return {k: v for k, v in (section or {}).items() if k in valid}

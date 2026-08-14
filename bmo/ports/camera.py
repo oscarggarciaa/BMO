@@ -7,7 +7,7 @@ from typing import Any
 
 
 class CameraSourcePort(ABC):
-    """Fuente de imagen. Implementaciones: picamera2 hoy, USB o AI Camera mañana."""
+    """Fuente de imagen. Implementación actual: AI Camera IMX500 (on-sensor)."""
 
     @abstractmethod
     def start(self) -> None:

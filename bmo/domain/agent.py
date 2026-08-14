@@ -44,10 +44,6 @@ class Agent:
 
     def _trim_history(self) -> None:
         """Acota el historial a system prompt + últimos N mensajes.
-
-        Con `max_history` <= 0 no recorta (ilimitado). Recortar al inicio del
-        turno evita llenar la caché de conversación del NPU sin romper el flujo
-        de tools del turno actual (esos mensajes se añaden después).
         """
         if self._max_history <= 0:
             return
@@ -67,8 +63,7 @@ class Agent:
         logger.debug("USER preguntó: %s", text)
         self._face.show(Expression.THINKING)
 
-        # guard anti-loop: recuerda qué (tool, args) ya se ejecutaron este turno
-        # y el último resultado, para cortar si el modelo se repite.
+        # recuerda que tools se han usado para no repetrirlas
         executed: Set[Tuple[str, str]] = set()
         last_result: Optional[str] = None
 

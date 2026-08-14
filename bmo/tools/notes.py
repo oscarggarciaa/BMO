@@ -34,17 +34,12 @@ def build_save_note_tool(notes: NotesPort) -> Tool:
                 "description": "The full text of the note to remember.",
             },
         },
-        # directa: la confirmación ES la respuesta; el modelo NO vuelve a decidir
-        # (si no, un modelo pequeño encadena tools extra tras guardar).
         direct=True,
     )
 
 
 def build_read_notes_tool(notes: NotesPort) -> Tool:
     """Arma la tool `read_notes`: con tema busca; sin tema, devuelve todas.
-
-    Fusiona 'buscar por tema' y 'listar todo' en UNA sola tool, porque un
-    modelo pequeño no distingue fiablemente entre las dos.
     """
 
     def read_notes(query: str = "", question: str = "") -> str:
@@ -79,7 +74,5 @@ def build_read_notes_tool(notes: NotesPort) -> Tool:
                 ),
             },
         },
-        # directa: devuelve las notas tal cual, sin que el modelo las resuma ni
-        # invente (la persona lo obliga a responder corto).
         direct=True,
     )

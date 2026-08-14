@@ -1,12 +1,4 @@
-"""Adapter de la Raspberry Pi AI Camera (Sony IMX500): inferencia on-sensor.
-
-A diferencia de una cámara normal + visión aparte, el IMX500 ACOPLA cámara e
-inferencia: la red neuronal corre DENTRO del sensor y las detecciones salen del
-metadata de su propio pipeline, no de un frame arbitrario. Además `IMX500(...)`
-debe crearse ANTES que `Picamera2()`. Por eso es UN solo adapter que cumple los
-dos ports (`CameraSourcePort` + `VisionPort`): el composition root inyecta la
-misma instancia como cámara y como visión.
-"""
+"""Adapter de la Raspberry Pi AI Camera (Sony IMX500): inferencia on-sensor."""
 
 from __future__ import annotations
 
@@ -19,10 +11,6 @@ from bmo.ports.camera import CameraSourcePort
 from bmo.ports.vision import VisionPort
 
 _LOG = logging.getLogger(__name__)
-
-# No todos los frames del IMX500 traen el tensor de inferencia adjunto: en los
-# que no, get_outputs() devuelve None. analyze() reintenta hasta este número de
-# frames para obtener uno con detección fresca antes de detenerse.
 MAX_METADATA_TRIES = 15
 
 
@@ -34,14 +22,7 @@ def build_perception(
     threshold: float,
     to_box: Callable[[Any], BoundingBox],
 ) -> Perception:
-    """Convierte los tensores de salida del IMX500 en una Perception (lógica pura).
-
-    - `boxes`, `scores`, `classes`: iterables alineados (una entrada por detección).
-    - `labels`: nombres de clase indexados por el id que devuelve la red.
-    - `threshold`: se descartan las detecciones con score <= threshold.
-    - `to_box`: convierte las coords crudas del tensor a un BoundingBox ya escalado
-      al espacio de la imagen (en producción usa `convert_inference_coords`).
-    """
+    
     detections: List[Detection] = []
     for coords, score, cls in zip(boxes, scores, classes):
         if float(score) <= threshold:
@@ -58,13 +39,7 @@ def prepare_boxes(
     bbox_order: str,
     input_h: int,
 ) -> Any:
-    """Normaliza y reordena las cajas crudas según los intrinsics del modelo.
-
-    - `bbox_normalization`: si el modelo entrega coords en píxeles del tensor de
-      entrada, se dividen por `input_h` para llevarlas a [0, 1].
-    - `bbox_order`: 'yx' -> (y0, x0, y1, x1) (lo que espera convert_inference_coords);
-      'xy' -> (x0, y0, x1, y1), que hay que reordenar a 'yx'.
-    """
+    
     if bbox_normalization:
         boxes = boxes / input_h
     if bbox_order == "xy":
@@ -73,7 +48,6 @@ def prepare_boxes(
 
 
 class AiCameraImx500(CameraSourcePort, VisionPort):
-    """Cámara + visión on-sensor en un solo dispositivo (Sony IMX500)."""
 
     def __init__(
         self,
@@ -107,8 +81,9 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
             from picamera2 import Picamera2
             from picamera2.devices import IMX500
 
-            # IMPORTANTE: el IMX500 debe existir ANTES de instanciar Picamera2.
-            self._imx500 = IMX500(self._rpk_path)
+            # primero inicializar imx500
+            self._imx500 = IMX500(self._rpk_path) # fichero .rpk del modelo
+            # cargar información de la camara
             intrinsics = self._imx500.network_intrinsics
             self._intrinsics = intrinsics
             if intrinsics is not None and intrinsics.labels:
@@ -121,7 +96,7 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
                 )
             )
             self._picam2.start()
-        except Exception:  # noqa: BLE001 - sin AI Camera, BMO sigue funcionando sin visión
+        except Exception: # si falla aqui ya no se usará la camara en el codigo pero sigue funcionando BMO
             self._picam2 = None
             self._imx500 = None
             self._intrinsics = None
@@ -133,24 +108,18 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
     def capture(self) -> Any:
         if self._picam2 is None:
             return None
-        return self._picam2.capture_array()
+        return self._picam2.capture_array() # devolver frame en formato RGB888
 
     def analyze(self, frame: Any, question: str = "") -> Perception:
-        # El IMX500 no analiza un frame arbitrario: lee las detecciones frescas
-        # del metadata de su propio pipeline. `frame` y `question` se ignoran.
         if self._picam2 is None or self._imx500 is None:
-            return Perception()
-
-        # No todos los frames traen el tensor de inferencia; reintentamos unos
-        # cuantos hasta obtener uno con datos (si no, "veo: nada" todo el tiempo).
+            return Perception() # rdevolver perception vacia
         np_outputs = None
         metadata = None
         for _ in range(MAX_METADATA_TRIES):
             metadata = self._picam2.capture_metadata()
-            # add_batch=True: los tensores vienen como (1, N, ...); [0] extrae el batch.
-            np_outputs = self._imx500.get_outputs(metadata, add_batch=True)
+            np_outputs = self._imx500.get_outputs(metadata, add_batch=True) # obtener cajas scores y clases
             if np_outputs is not None:
-                break
+                break # parar si se obtienen resultados
         if np_outputs is None:
             return Perception()
 
@@ -158,10 +127,10 @@ class AiCameraImx500(CameraSourcePort, VisionPort):
         scores = np_outputs[1][0]
         classes = np_outputs[2][0]
 
-        _, input_h = self._imx500.get_input_size()
-        bbox_normalization = getattr(self._intrinsics, "bbox_normalization", False)
-        bbox_order = getattr(self._intrinsics, "bbox_order", "yx")
-        boxes = prepare_boxes(boxes, bbox_normalization, bbox_order, input_h)
+        _, input_h = self._imx500.get_input_size() # obtener tamaño de entrada del modelo
+        bbox_normalization = getattr(self._intrinsics, "bbox_normalization", False) # obtener si las cajas estan normalizadas
+        bbox_order = getattr(self._intrinsics, "bbox_order", "yx") # obtener orden de las cajas (yx o xy)
+        boxes = prepare_boxes(boxes, bbox_normalization, bbox_order, input_h) # preparar cajas para construir perception
 
         def to_box(coords: Any) -> BoundingBox:
             # convert_inference_coords devuelve una tupla (x, y, w, h), NO un objeto.

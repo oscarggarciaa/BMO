@@ -1,26 +1,13 @@
-# =============================================================================
-# Configuracion de BMO
-# -----------------------------------------------------------------------------
-# Este archivo es el CORAZON del desacoplamiento. Cada seccion elige que
-# "adapter" concreto se usa para cada capacidad (port). El dia que llegue el
-# hardware nuevo (AI Camera IMX500, AI HAT+2 con Hailo-10H), cambias el campo
-# `adapter` y nada mas. El codigo del agente ni se entera.
-# =============================================================================
-
 camera:
-  adapter: ai_camera_imx500   # picamera2 (camara normal) | usb | ai_camera_imx500 (inferencia on-sensor)
+  adapter: ai_camera_imx500
   width: 1296
   height: 972
   format: RGB888
 
 vision:
-  adapter: ai_camera_imx500   # opencv_haar (solo caras) | ai_camera_imx500 (deteccion on-sensor)
-  # --- ai_camera_imx500: la deteccion corre DENTRO del sensor (IMX500) ---
-  # OJO: camara y vision deben ser AMBAS ai_camera_imx500 (es un solo dispositivo).
+  adapter: ai_camera_imx500
   rpk_path: /usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk
-  threshold: 0.35             # confianza minima para contar una deteccion (mas bajo = ve mas cosas)
-  models_path: /home/oscar/Desktop/bmo/models
-  min_face_size: 80
+  threshold: 0.35
 
 #brain:
   # hailo -> NPU Hailo-10H via hailo-ollama (puerto 8000). ollama -> CPU (puerto 11434).
@@ -34,30 +21,29 @@ brain:
   adapter: hailo
   model: qwen3:1.7b
   host: http://localhost:8000
-  max_history: 2          # system prompt + ultimos N mensajes (0 = ilimitado). Evita llenar la cache del NPU.
+  max_history: 2        # 0 para ilimitado
 
-voice:                        # BMO habla por los altavoces (TTS)
-  adapter: piper              # none (muda) | piper (TTS neuronal offline)
-  model_path: models/bmo.onnx  # voz BMO fine-tuneada (release v1.0-voice de be-more-agent, base en_US-amy-medium)
+voice:                        
+  adapter: piper             
+  model_path: models/bmo.onnx  
   device: "plughw:2,0"    
-  sample_rate: 22050         # coincide con el sample_rate del modelo bmo.onnx (22050 Hz)
+  sample_rate: 22050
 
-hearing:                      # BMO escucha por el microfono (STT + wake-word)
-  adapter: vosk              # none (sordo) | vosk (STT neuronal offline)
-  model_path: models/vosk-model-small-en-us-0.15  # descargar de alphacephei.com/vosk/models
-  device: "plughw:2,0"       # mismo combo USB que el parlante (arecord -D)
-  sample_rate: 16000         # 16kHz: el estandar para speech-to-text
-  wake_word: hello           # la palabra magica que despierta a BMO
+hearing:                    
+  adapter: vosk
+  model_path: models/vosk-model-small-en-us-0.15
+  device: "plughw:2,0"       
+  sample_rate: 16000
+  wake_word: hello
 
-screen:                       # cara de BMO directo en la pantalla fisica (tkinter)
+screen:                       
   enabled: true
   fullscreen: true
   fps: 4
 
-notes:                        # notas que BMO guarda (estilo Obsidian: un .md por nota)
+notes:                        
   enabled: true
-  path: notes                 # carpeta donde se guardan; tocar la pantalla las lista
+  path: notes                 
 
-# debug: false -> modo normal, el log solo muestra ENTRADA (usuario) y SALIDA (BMO).
-#        true  -> modo debug, el log muestra TODO (pasos, tools, resultados...).
+# modo
 debug: false

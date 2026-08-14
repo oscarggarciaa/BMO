@@ -11,7 +11,7 @@ import yaml
 
 @dataclass(frozen=True)
 class CameraConfig:
-    adapter: str = "picamera2"
+    adapter: str = "ai_camera_imx500"
     width: int = 1296
     height: int = 972
     format: str = "RGB888"
@@ -23,10 +23,7 @@ class CameraConfig:
 
 @dataclass(frozen=True)
 class VisionConfig:
-    adapter: str = "opencv_haar"
-    models_path: str = "models"
-    min_face_size: int = 80
-    # ai_camera_imx500: .rpk del modelo on-sensor y umbral de confianza
+    adapter: str = "ai_camera_imx500"
     rpk_path: str = (
         "/usr/share/imx500-models/"
         "imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
@@ -39,26 +36,24 @@ class BrainConfig:
     adapter: str = "ollama"
     model: str = "llama3.2:3b"
     host: str = "http://localhost:11434"
-    # historial máximo enviado al cerebro (system + últimos N mensajes). 0 =
-    # ilimitado. Acotarlo evita llenar la caché de conversación del NPU Hailo.
     max_history: int = 0
 
 
 @dataclass(frozen=True)
 class VoiceConfig:
-    adapter: str = "none"  # none (sin voz) | piper (TTS neuronal offline)
+    adapter: str = "none" 
     model_path: str = "models/en_US-lessac-medium.onnx"
-    device: str = ""  # aplay -D (p. ej. plughw:1,0 para la placa USB); vacío = default
+    device: str = ""
     sample_rate: int = 22050
 
 
 @dataclass(frozen=True)
 class HearingConfig:
-    adapter: str = "none"  # none (sin micrófono) | vosk (STT offline)
+    adapter: str = "none"
     model_path: str = "models/vosk-model-small-en-us-0.15"
-    device: str = ""  # arecord -D (p. ej. plughw:2,0 para la placa USB); vacío = default
-    sample_rate: int = 16000  # 16kHz: el estándar para speech-to-text
-    wake_word: str = "hello"  # la palabra que activa a BMO
+    device: str = ""
+    sample_rate: int = 16000
+    wake_word: str = "hello"
 
 
 @dataclass(frozen=True)
@@ -71,7 +66,7 @@ class ScreenConfig:
 @dataclass(frozen=True)
 class NotesConfig:
     enabled: bool = True
-    path: str = "notes"  # carpeta donde se guardan las notas .md (estilo Obsidian)
+    path: str = "notes" 
 
 
 @dataclass(frozen=True)
@@ -83,7 +78,6 @@ class Config:
     hearing: HearingConfig
     screen: ScreenConfig
     notes: NotesConfig
-    # debug: True muestra TODO en el log; False solo entrada/salida.
     debug: bool = False
 
     @classmethod
@@ -110,8 +104,6 @@ class Config:
 def _known(config_cls: type, section: dict[str, Any] | None) -> dict[str, Any]:
     """Filtra una sección a las claves que el dataclass conoce.
 
-    Da robustez ante drift: una clave nueva en config.yaml que el código aún no
-    tiene se ignora en vez de tumbar el arranque.
     """
     valid = {f.name for f in fields(config_cls)}
     return {k: v for k, v in (section or {}).items() if k in valid}

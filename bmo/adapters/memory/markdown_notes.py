@@ -84,10 +84,10 @@ class MarkdownNotes(NotesPort):
 
 
 def _derive_title(content: str) -> str:
-    """Título por defecto: la primera línea recortada (o 'Untitled note')."""
+    """Título por defecto: la primera línea recortada."""
     first_line = next((ln.strip() for ln in content.splitlines() if ln.strip()), "")
     if not first_line:
-        return "Untitled note"
+        return "Nota sin título"
     if len(first_line) <= _MAX_TITLE_LEN:
         return first_line
     return first_line[:_MAX_TITLE_LEN].rstrip() + "…"

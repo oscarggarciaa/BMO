@@ -41,6 +41,7 @@ def _build_vosk_session(model_path: str, device: str, sample_rate: int) -> Sessi
     def listen_one() -> str:
         # recognizer nuevo por turno: estado de decodificacion limpio.
         recognizer = KaldiRecognizer(model, sample_rate)
+        # abrir arecord para capturar audio
         mic = subprocess.Popen(
             _arecord_command(device, sample_rate),
             stdout=subprocess.PIPE,

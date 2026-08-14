@@ -1,8 +1,4 @@
 """Port del oído: la entrada de voz de BMO.
-
-Es el simétrico del VoicePort. Así como `VoicePort.speak(text)` EMITE voz,
-`HearingPort.listen()` RECIBE voz transcrita a texto. El adapter solo hace
-audio -> texto; decidir si ese texto activa a BMO corresponde al dominio.
 """
 
 from __future__ import annotations

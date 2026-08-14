@@ -30,10 +30,6 @@ class NotesPort(ABC):
 
     def search(self, query: str, limit: int = 5) -> List[Note]:
         """Devuelve las notas más relevantes para `query`, la más relevante primero.
-
-        Implementación por defecto: puntuación por palabras clave sobre `all()`,
-        con el título pesando más que el cuerpo. Un adapter puede sobrescribirla
-        (p. ej. búsqueda semántica con embeddings) sin que las tools se enteren.
         """
         terms = _terms(query)
         if not terms:
@@ -49,9 +45,6 @@ class NotesPort(ABC):
 
 class NullNotes(NotesPort):
     """Notas que no persisten nada.
-
-    Patrón Null Object: si las notas están deshabilitadas, el resto del código
-    puede llamar a `save`/`all` sin preguntar `if notes is not None`.
     """
 
     def save(self, content: str, title: str = "") -> Note:

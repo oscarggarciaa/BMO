@@ -11,8 +11,8 @@ from bmo.domain.models import Perception
 class VisionPort(ABC):
     """Analiza un frame y devuelve QUÉ se ve, sin dibujar nada.
 
-    Implementaciones: OpenCV+Haar (CPU) hoy; AI Camera IMX500 (inferencia en la
-    propia cámara) cuando llegue el hardware.
+    Implementación actual: AI Camera IMX500 (la inferencia corre en el propio
+    sensor). El port permite cambiarla sin que el dominio se entere.
     """
 
     @abstractmethod
@@ -20,5 +20,4 @@ class VisionPort(ABC):
         """Recibe un frame (array BGR) y una pregunta opcional del usuario.
 
         `question` da contexto al modelo de visión cuando lo soporta.
-        Las visiones que no lo usan (OpenCV+Haar) simplemente lo ignoran.
         """

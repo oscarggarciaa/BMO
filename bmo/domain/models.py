@@ -12,7 +12,24 @@ from typing import Any, Dict, List, Optional, Tuple
 class BoundingBox:
     """Rectángulo en coordenadas absolutas del frame."""
 
-    x: int
+
+    """
+
+    (0,0) ───────────────► x crece
+    │
+    │      (x,y)┌──────────┐  
+    │           │          │
+    │           │  persona │  h (alto)
+    │           │          │
+    │           └──────────┘
+    ▼               w (ancho)
+    y
+    
+    
+    
+    """
+
+    x: int 
     y: int
     w: int
     h: int

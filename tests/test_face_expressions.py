@@ -79,6 +79,22 @@ def test_thinking_first_and_talking_last_when_using_a_tool() -> None:
 
 def test_emits_sad_on_safety_cutoff() -> None:
     face = RecordingFace()
+    # llamadas con args DISTINTOS para no disparar el guard anti-loop: así el
+    # agente agota de verdad los pasos y llega al corte de seguridad (cara SAD).
+    brain = ScriptedBrain(
+        [BrainDecision(tool_calls=(ToolCall(name="look", arguments={"n": i}),)) for i in range(10)]
+    )
+    agent = Agent(brain=brain, tools=_registry_with_look(), face=face, max_steps=3)
+
+    agent.ask("loop infinito")
+
+    assert face.calls[-1] == Expression.SAD
+
+
+def test_emits_talking_when_loop_guard_cuts_a_repeated_call() -> None:
+    # loop con la MISMA llamada exacta: el guard corta con gracia y BMO habla
+    # (cara TALKING), en vez de llegar al corte de seguridad (cara SAD).
+    face = RecordingFace()
     brain = ScriptedBrain(
         [BrainDecision(tool_calls=(ToolCall(name="look"),)) for _ in range(10)]
     )
@@ -86,4 +102,6 @@ def test_emits_sad_on_safety_cutoff() -> None:
 
     agent.ask("loop infinito")
 
-    assert face.calls[-1] == Expression.SAD
+    assert Expression.SAD not in face.calls
+    assert face.calls[-1] == Expression.TALKING
+

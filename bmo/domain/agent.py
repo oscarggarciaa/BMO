@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 
 from bmo.domain.models import Expression, Message, ToolCall, Utterance
 from bmo.ports.face import FacePort, NullFace
@@ -66,6 +67,11 @@ class Agent:
         logger.debug("USER preguntó: %s", text)
         self._face.show(Expression.THINKING)
 
+        # guard anti-loop: recuerda qué (tool, args) ya se ejecutaron este turno
+        # y el último resultado, para cortar si el modelo se repite.
+        executed: Set[Tuple[str, str]] = set()
+        last_result: Optional[str] = None
+
         for step in range(self._max_steps):
             logger.debug("paso %d/%d: BMO está pensando...", step + 1, self._max_steps)
             # el brain decide qué hacer, si la tool no es directa, la respuesta de la tool se añade al historial y el brain decide otra vez
@@ -98,8 +104,23 @@ class Agent:
             )
             # para ejecutar una tool el brain nos pasa una respuesta con el action que quiere ejecutar
             for call in decision.tool_calls:
+                signature = (call.name, json.dumps(call.arguments, sort_keys=True, default=str))
+                if signature in executed and last_result is not None:
+                    # el modelo se repite: cortamos el loop y respondemos con lo que ya tenemos
+                    logger.warning(
+                        "guard anti-loop: '%s' repetida con los mismos args; corto el loop",
+                        call.name,
+                    )
+                    self._voice.speak(
+                        last_result,
+                        on_audio_start=lambda: self._face.show(Expression.TALKING),
+                    )
+                    self._history.append(Message(role="assistant", content=last_result))
+                    return Utterance(text=last_result, speaker="bmo")
+                executed.add(signature)
                 logger.debug("ejecutando tool '%s' con args=%s", call.name, call.arguments)
                 result = self._execute(call, question=text)
+                last_result = result
                 logger.debug("tool '%s' devolvió: %s", call.name, result)
                 self._history.append(
                     Message(role="tool", content=result, name=call.name)

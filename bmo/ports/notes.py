@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -27,6 +28,24 @@ class NotesPort(ABC):
     def delete(self, note: Note) -> None:
         """Borra la nota indicada (identificada por su `id`). Idempotente."""
 
+    def search(self, query: str, limit: int = 5) -> List[Note]:
+        """Devuelve las notas más relevantes para `query`, la más relevante primero.
+
+        Implementación por defecto: puntuación por palabras clave sobre `all()`,
+        con el título pesando más que el cuerpo. Un adapter puede sobrescribirla
+        (p. ej. búsqueda semántica con embeddings) sin que las tools se enteren.
+        """
+        terms = _terms(query)
+        if not terms:
+            return []
+        scored = [
+            (score, note)
+            for note in self.all()
+            if (score := _score(note, terms)) > 0
+        ]
+        scored.sort(key=lambda item: (item[0], item[1].created_at), reverse=True)
+        return [note for _, note in scored[:limit]]
+
 
 class NullNotes(NotesPort):
     """Notas que no persisten nada.
@@ -45,3 +64,19 @@ class NullNotes(NotesPort):
 
     def delete(self, note: Note) -> None:
         return None
+
+
+def _terms(query: str) -> List[str]:
+    return re.findall(r"[a-z0-9]+", (query or "").lower())
+
+
+def _score(note: Note, terms: List[str]) -> int:
+    title = note.title.lower()
+    body = note.content.lower()
+    score = 0
+    for term in terms:
+        if term in title:
+            score += 2  # el título pesa más que el cuerpo
+        if term in body:
+            score += 1
+    return score

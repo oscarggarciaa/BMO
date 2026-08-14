@@ -48,10 +48,11 @@ def test_save_note_tool_is_named_save_note() -> None:
     assert tool.name == "save_note"
 
 
-def test_save_note_tool_is_not_direct() -> None:
-    # no es directa: BMO narra la confirmación en su personalidad
+def test_save_note_tool_is_direct() -> None:
+    # directa: la confirmación ES la respuesta, sin que el modelo vuelva a
+    # decidir (evita que un modelo pequeño encadene tools extra tras guardar).
     tool = build_save_note_tool(FakeNotes())
-    assert tool.direct is False
+    assert tool.direct is True
 
 
 def test_save_note_persists_the_content() -> None:

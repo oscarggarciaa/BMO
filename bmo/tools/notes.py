@@ -1,4 +1,4 @@
-"""Tools de notas: apunta (`save_note`), recuerda (`recall_note`), lista (`list_notes`)."""
+"""Tools de notas: BMO apunta (`save_note`) y lee (`read_notes`)."""
 
 from __future__ import annotations
 
@@ -20,12 +20,12 @@ def build_save_note_tool(notes: NotesPort) -> Tool:
     return Tool(
         name="save_note",
         description=(
-            "Write down and remember NEW information for the user. Use this "
-            "whenever the user asks BMO to remember something, take a note, "
-            "write something down, jot it down, or save an idea, a reminder or "
-            "a task (for example 'remember to buy milk'). After saving, just "
-            "confirm in one short sentence: do NOT look it up. Pass the full "
-            "text to remember as `content`."
+            "Store NEW information the user gives you. Use this ONLY when the "
+            "user TELLS or COMMANDS you to remember, save, note or write down "
+            "something, as a statement (for example 'remember to buy milk', "
+            "'note that the door is broken'). NEVER use it for a QUESTION like "
+            "'what do I have to remember' or 'what did I save': those are "
+            "list_notes or recall_note. Pass the text to store as `content`."
         ),
         func=save_note,
         parameters={
@@ -34,66 +34,52 @@ def build_save_note_tool(notes: NotesPort) -> Tool:
                 "description": "The full text of the note to remember.",
             },
         },
-        direct=False,
+        # directa: la confirmación ES la respuesta; el modelo NO vuelve a decidir
+        # (si no, un modelo pequeño encadena tools extra tras guardar).
+        direct=True,
     )
 
 
-def build_recall_note_tool(notes: NotesPort) -> Tool:
-    """Arma la tool `recall_note` cableando un almacén de notas concreto."""
+def build_read_notes_tool(notes: NotesPort) -> Tool:
+    """Arma la tool `read_notes`: con tema busca; sin tema, devuelve todas.
 
-    def recall_note(query: str = "", question: str = "") -> str:
-        # query = lo que el modelo extrajo; question = el mensaje completo (respaldo)
-        text = (query or "").strip() or (question or "").strip()
-        if not text:
-            return "I don't know what to look for in my notes."
-        found = notes.search(text, limit=3)
-        if not found:
-            return "I don't have any note about that."
+    Fusiona 'buscar por tema' y 'listar todo' en UNA sola tool, porque un
+    modelo pequeño no distingue fiablemente entre las dos.
+    """
+
+    def read_notes(query: str = "", question: str = "") -> str:
+        topic = (query or "").strip()
+        if topic:
+            found = notes.search(topic, limit=5)
+            if not found:
+                return "I don't have any note about that."
+        else:
+            found = notes.all()
+            if not found:
+                return "You don't have any notes yet."
         lines = [f"- {note.content}" for note in found]
         return "Here is what I remember:\n" + "\n".join(lines)
 
     return Tool(
-        name="recall_note",
+        name="read_notes",
         description=(
-            "Look up notes the user asked BMO to remember EARLIER. Use this "
-            "ONLY when the user ASKS about the past: what BMO has saved, what "
-            "is on their list or reminders, or a question a past note could "
-            "answer (for example 'what did I ask you to buy', 'what do you "
-            "remember', 'what is on my list'). Do NOT use it when the user is "
-            "giving you something NEW to remember: that is save_note. Pass the "
-            "keywords or topic to look for as `query`."
+            "Read the user's saved notes. Use this for ANY QUESTION about what "
+            "the user has saved, has to remember, or what is on their list "
+            "(for example 'what do I have to remember', 'what did I ask you to "
+            "buy', 'tell me everything', 'what is on my list'). Give a `query` "
+            "with a topic to search, or leave it EMPTY to read ALL notes. "
+            "NEVER use it to store new info: that is save_note."
         ),
-        func=recall_note,
+        func=read_notes,
         parameters={
             "query": {
                 "type": "string",
-                "description": "Keywords or topic to search for in the saved notes.",
+                "description": (
+                    "Topic to search for; leave empty to read all notes."
+                ),
             },
         },
-        direct=False,
-    )
-
-
-def build_list_notes_tool(notes: NotesPort) -> Tool:
-    """Arma la tool `list_notes` cableando un almacén de notas concreto."""
-
-    def list_notes(question: str = "") -> str:
-        found = notes.all()
-        if not found:
-            return "You don't have any notes yet."
-        lines = [f"- {note.content}" for note in found]
-        return "Here is everything I remember:\n" + "\n".join(lines)
-
-    return Tool(
-        name="list_notes",
-        description=(
-            "List ALL the notes the user asked BMO to remember. Use this when "
-            "the user asks what they have to remember, what is on their list, "
-            "to tell them everything, or to list all their notes, reminders or "
-            "tasks (for example 'what do I have to remember', 'tell me "
-            "everything', 'what is on my list'). Takes no arguments."
-        ),
-        func=list_notes,
-        parameters={},
+        # directa: devuelve las notas tal cual, sin que el modelo las resuma ni
+        # invente (la persona lo obliga a responder corto).
         direct=True,
     )

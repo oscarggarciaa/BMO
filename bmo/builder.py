@@ -19,11 +19,7 @@ from bmo.ports.notes import NotesPort
 from bmo.ports.vision import VisionPort
 from bmo.ports.voice import VoicePort
 from bmo.tools.look import build_look_tool
-from bmo.tools.notes import (
-    build_list_notes_tool,
-    build_recall_note_tool,
-    build_save_note_tool,
-)
+from bmo.tools.notes import build_read_notes_tool, build_save_note_tool
 from bmo.tools.tool import ToolRegistry
 
 if TYPE_CHECKING:
@@ -160,8 +156,7 @@ def build_agent(
     registry.register(build_look_tool(camera, vision))
     if notes is not None:
         registry.register(build_save_note_tool(notes))
-        registry.register(build_recall_note_tool(notes))
-        registry.register(build_list_notes_tool(notes))
+        registry.register(build_read_notes_tool(notes))
     return Agent(
         brain=brain,
         tools=registry,

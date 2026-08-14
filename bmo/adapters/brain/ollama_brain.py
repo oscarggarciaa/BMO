@@ -214,6 +214,14 @@ class OllamaBrain:
                 f'  User: take a note that the door is broken -> '
                 f'{{"action": "{arg_tool.name}", "{field}": "the door is broken"}}',
             ]
+        if "read_notes" in {t.name for t in tools}:
+            lines += [
+                '  User: what do I have to remember? -> {"action": "read_notes"}',
+                '  User: what is on my list? -> {"action": "read_notes"}',
+                '  User: tell me everything -> {"action": "read_notes"}',
+                '  User: what did I ask you to buy? -> '
+                '{"action": "read_notes", "query": "buy"}',
+            ]
         return "\n".join(lines)
 
     @staticmethod
